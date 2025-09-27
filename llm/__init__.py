@@ -1,7 +1,6 @@
 """
 LLM integration module
 """
-from .integration import LLMIntegration
-from .validation import AIValidator
+from .integration import ask_gemini
 
 __all__ = ['LLMIntegration', 'AIValidator']
