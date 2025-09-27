@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from core.parser import PseudocodeParser
 from core.complexity import ComplexityAnalyzer
-from llm.integration import LLMIntegration
+from llm.integration import ask_gemini
 
 app = FastAPI(title="Analizador de Complejidades", version="1.0.0")
 
