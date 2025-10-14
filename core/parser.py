@@ -7,24 +7,25 @@ analizar ejecución línea por línea para calcular propiedades detalladas.
 from lark import Lark, Transformer, Tree, Token
 from typing import Dict, List, Any
 import re
+from typing import List, Optional, Any
 
 class ASTNode:
     """
     Nodo base del Árbol de sintaxis abstracta
     """
-    def __init__(self, type_: str, value: Any = None, children: List['ASTNode'] = None):
-        self.type = type_
-        self.value = value
-        self.children = children or []
+    def __init__(self, type_: str, value: Any = None, children: Optional[List['ASTNode']] = None):
+        self.type: str = type_
+        self.value: Optional[Any] = value
+        self.children: List[ASTNode] = children if children is not None else []
 
         # Propiedades nuevas para análisis detallado
-        self.line_no = None
-        self.raw = None
+        self.line_no: Optional[int] = None
+        self.raw: Optional[str] = None
         self.variables_read: List[str] = []
         self.variables_written: List[str] = []
-        self.exec_count = None
-        self.time_cost = None
-        self.space_cost = None
+        self.exec_count: Optional[str] = None
+        self.time_cost: Optional[str] = None
+        self.space_cost: Optional[str] = None
 
     def add_child(self, child: 'ASTNode'):
         self.children.append(child)

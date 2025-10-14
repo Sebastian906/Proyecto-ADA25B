@@ -3,9 +3,10 @@ Módulo para análisis de complejidad de algoritmos (O, Ω, Θ)
 Incluye análisis detallado de loops, recursión y patrones algorítmicos
 """
 
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Any
 import re
 from dataclasses import dataclass
+
 
 @dataclass
 class ComplexityResult:
@@ -17,24 +18,26 @@ class ComplexityResult:
     recurrence: Optional[str] = None
     pattern_type: Optional[str] = None
 
+
 class ComplexityAnalyzer:
     """
     Clase para analizar la complejidad de algoritmos a partir de su pseudocódigo
     Detecta O (peor caso), Ω (mejor caso), Θ (caso promedio)
     """
-    def __init__(self):
-        self.code = None
-        self.complexity_result = None
-        self.nested_depth = 0
-        self.has_recursion = False
-        self.has_conditionals = False
+    
+    def __init__(self) -> None:
+        self.code: Optional[str] = None
+        self.complexity_result: Optional[ComplexityResult] = None
+        self.nested_depth: int = 0
+        self.has_recursion: bool = False
+        self.has_conditionals: bool = False
 
     def analyze(self, code: str) -> ComplexityResult:
         """
         Analiza la complejidad completa de un algoritmo
         
         Args:
-            code (str): Pseudocódigo del algoritmo a analizar
+            code: Pseudocódigo del algoritmo a analizar
             
         Returns:
             ComplexityResult: Objeto con todas las complejidades (O, Ω, Θ)
@@ -45,16 +48,16 @@ class ComplexityAnalyzer:
         self.has_conditionals = False
 
         # Análisis de estructura
-        loop_complexity = self._analyze_loops()
-        recursion_info = self._analyze_recursion()
-        conditional_impact = self._analyze_conditionals()
+        loop_complexity: Dict[str, Any] = self._analyze_loops()
+        recursion_info: Dict[str, Any] = self._analyze_recursion()
+        conditional_impact: Dict[str, Any] = self._analyze_conditionals()
         
         # Determinar complejidades
-        big_o = self._calculate_big_o(loop_complexity, recursion_info)
-        omega = self._calculate_omega(loop_complexity, recursion_info, conditional_impact)
-        theta = self._calculate_theta(big_o, omega, conditional_impact)
+        big_o: str = self._calculate_big_o(loop_complexity, recursion_info)
+        omega: str = self._calculate_omega(loop_complexity, recursion_info, conditional_impact)
+        theta: str = self._calculate_theta(big_o, omega, conditional_impact)
         
-        explanation = self._generate_explanation(
+        explanation: str = self._generate_explanation(
             loop_complexity, recursion_info, conditional_impact
         )
         
@@ -69,13 +72,14 @@ class ComplexityAnalyzer:
         
         return self.complexity_result
 
-    def _analyze_loops(self) -> Dict:
+    def _analyze_loops(self) -> Dict[str, Any]:
         """Analiza loops simples y anidados"""
-        lines = self.code.split('\n')
-        loop_stack = []
-        max_depth = 0
-        current_depth = 0
-        loop_info = {
+        lines: List[str] = self.code.split('\n') if self.code else []
+        loop_stack: List[str] = []
+        max_depth: int = 0
+        current_depth: int = 0
+        
+        loop_info: Dict[str, Any] = {
             'simple_loops': 0,
             'nested_depth': 0,
             'while_loops': 0,
@@ -84,27 +88,27 @@ class ComplexityAnalyzer:
         }
         
         for line in lines:
-            line = line.strip()
+            line_clean: str = line.strip()
             
             # Detectar inicio de loop
-            if re.search(r'\b(for|para)\b', line):
+            if re.search(r'\b(for|para)\b', line_clean):
                 current_depth += 1
                 loop_stack.append('for')
                 loop_info['for_loops'] += 1
                 max_depth = max(max_depth, current_depth)
                 
-            elif re.search(r'\bwhile\b|\bmientras\b', line):
+            elif re.search(r'\bwhile\b|\bmientras\b', line_clean):
                 current_depth += 1
                 loop_stack.append('while')
                 loop_info['while_loops'] += 1
                 max_depth = max(max_depth, current_depth)
                 
                 # Detectar patrón logarítmico (búsqueda binaria)
-                if self._is_logarithmic_pattern(line):
+                if self._is_logarithmic_pattern(line_clean):
                     loop_info['has_logarithmic'] = True
             
             # Detectar fin de loop
-            elif re.search(r'\b(end|fin)\b', line):
+            elif re.search(r'\b(end|fin)\b', line_clean):
                 if loop_stack:
                     loop_stack.pop()
                     current_depth -= 1
@@ -116,7 +120,7 @@ class ComplexityAnalyzer:
 
     def _is_logarithmic_pattern(self, line: str) -> bool:
         """Detecta patrones logarítmicos como división por 2, búsqueda binaria"""
-        patterns = [
+        patterns: List[str] = [
             r'\/\s*2',  # división por 2
             r'\*\s*2',  # multiplicación por 2
             r'izquierda.*derecha',  # búsqueda binaria
@@ -128,17 +132,20 @@ class ComplexityAnalyzer:
         ]
         return any(re.search(pattern, line) for pattern in patterns)
 
-    def _analyze_recursion(self) -> Dict:
+    def _analyze_recursion(self) -> Dict[str, Any]:
         """Analiza recursión y detecta patrones divide y conquista"""
-        recursion_info = {
+        recursion_info: Dict[str, Any] = {
             'has_recursion': False,
             'pattern': None,
             'recurrence': None,
             'recursive_calls': 0
         }
         
-        lines = self.code.split('\n')
-        function_name = None
+        if not self.code:
+            return recursion_info
+        
+        lines: List[str] = self.code.split('\n')
+        function_name: Optional[str] = None
         
         # Buscar definición de función
         for line in lines:
@@ -152,9 +159,9 @@ class ComplexityAnalyzer:
             return recursion_info
         
         # Contar llamadas recursivas
-        recursive_calls = 0
-        has_base_case = False
-        divides_problem = False
+        recursive_calls: int = 0
+        has_base_case: bool = False
+        divides_problem: bool = False
         
         for line in lines:
             # Detectar llamadas recursivas
@@ -190,17 +197,20 @@ class ComplexityAnalyzer:
         
         return recursion_info
 
-    def _analyze_conditionals(self) -> Dict:
+    def _analyze_conditionals(self) -> Dict[str, Any]:
         """Analiza condicionales y su impacto en complejidad"""
-        conditional_info = {
+        conditional_info: Dict[str, Any] = {
             'count': 0,
             'nested': False,
             'affects_omega': False,
             'early_return': False
         }
         
-        lines = self.code.split('\n')
-        if_depth = 0
+        if not self.code:
+            return conditional_info
+        
+        lines: List[str] = self.code.split('\n')
+        if_depth: int = 0
         
         for line in lines:
             # Contar condicionales
@@ -222,12 +232,12 @@ class ComplexityAnalyzer:
         self.has_conditionals = conditional_info['count'] > 0
         return conditional_info
 
-    def _calculate_big_o(self, loop_info: Dict, recursion_info: Dict) -> str:
+    def _calculate_big_o(self, loop_info: Dict[str, Any], recursion_info: Dict[str, Any]) -> str:
         """Calcula la complejidad O (peor caso)"""
         
         # Recursión tiene prioridad
         if recursion_info['has_recursion']:
-            pattern = recursion_info['pattern']
+            pattern: Optional[str] = recursion_info.get('pattern')
             if pattern == 'divide_y_conquista_simple':
                 return "O(log n)"
             elif pattern == 'divide_y_conquista_doble':
@@ -235,15 +245,15 @@ class ComplexityAnalyzer:
             elif pattern == 'recursion_lineal':
                 return "O(n)"
             elif pattern == 'recursion_multiple':
-                calls = recursion_info['recursive_calls']
+                calls: int = recursion_info.get('recursive_calls', 2)
                 return f"O({calls}^n)"
         
         # Loops logarítmicos
-        if loop_info['has_logarithmic']:
+        if loop_info.get('has_logarithmic', False):
             return "O(log n)"
         
         # Loops anidados
-        depth = loop_info['nested_depth']
+        depth: int = loop_info.get('nested_depth', 0)
         if depth == 0:
             return "O(1)"
         elif depth == 1:
@@ -255,69 +265,74 @@ class ComplexityAnalyzer:
         else:
             return f"O(n^{depth})"
 
-    def _calculate_omega(self, loop_info: Dict, recursion_info: Dict, 
-                        conditional_info: Dict) -> str:
+    def _calculate_omega(self, loop_info: Dict[str, Any], recursion_info: Dict[str, Any], 
+                        conditional_info: Dict[str, Any]) -> str:
         """Calcula la complejidad Ω (mejor caso)"""
         
         # Si hay early return, el mejor caso puede ser constante
-        if conditional_info['early_return']:
+        if conditional_info.get('early_return', False):
             return "Ω(1)"
         
         # Si hay recursión sin early return
-        if recursion_info['has_recursion']:
+        if recursion_info.get('has_recursion', False):
             # El mejor caso suele ser el caso base
             return "Ω(1)"
         
         # Para loops, el mejor caso es similar al peor caso
         # a menos que haya condicionales con break
-        if 'break' in self.code or 'salir' in self.code:
+        code_check: str = self.code if self.code else ""
+        if 'break' in code_check or 'salir' in code_check:
             return "Ω(1)"
         
         # Sin optimizaciones, Ω es igual a O
-        big_o = self._calculate_big_o(loop_info, recursion_info)
+        big_o: str = self._calculate_big_o(loop_info, recursion_info)
         return big_o.replace('O', 'Ω')
 
     def _calculate_theta(self, big_o: str, omega: str, 
-                        conditional_info: Dict) -> str:
+                        conditional_info: Dict[str, Any]) -> str:
         """Calcula la complejidad Θ (caso promedio)"""
         
         # Si O y Ω son iguales, entonces Θ es el mismo
-        if big_o.replace('O', '') == omega.replace('Ω', ''):
+        big_o_value: str = big_o.replace('O', '')
+        omega_value: str = omega.replace('Ω', '')
+        
+        if big_o_value == omega_value:
             return big_o.replace('O', 'Θ')
         
         # Si hay diferencia significativa entre mejor y peor caso
         # el caso promedio suele ser el peor caso
-        if conditional_info['affects_omega']:
+        if conditional_info.get('affects_omega', False):
             # Caso promedio es más cercano al peor caso
             return big_o.replace('O', 'Θ')
         
         return big_o.replace('O', 'Θ')
 
-    def _generate_explanation(self, loop_info: Dict, recursion_info: Dict,
-                            conditional_info: Dict) -> str:
+    def _generate_explanation(self, loop_info: Dict[str, Any], recursion_info: Dict[str, Any],
+                            conditional_info: Dict[str, Any]) -> str:
         """Genera explicación detallada del análisis"""
-        explanation = []
+        explanation: List[str] = []
         
-        if recursion_info['has_recursion']:
-            explanation.append(
-                f"Algoritmo recursivo detectado ({recursion_info['pattern']})"
-            )
-            if recursion_info['recurrence']:
-                explanation.append(f"Recurrencia: {recursion_info['recurrence']}")
+        if recursion_info.get('has_recursion', False):
+            pattern: Optional[str] = recursion_info.get('pattern')
+            explanation.append(f"Algoritmo recursivo detectado ({pattern})")
+            recurrence: Optional[str] = recursion_info.get('recurrence')
+            if recurrence:
+                explanation.append(f"Recurrencia: {recurrence}")
         
-        if loop_info['nested_depth'] == 1:
+        nested_depth: int = loop_info.get('nested_depth', 0)
+        if nested_depth == 1:
             explanation.append("Loop simple detectado → O(n)")
-        elif loop_info['nested_depth'] == 2:
+        elif nested_depth == 2:
             explanation.append("Loops anidados (2 niveles) detectados → O(n²)")
-        elif loop_info['nested_depth'] > 2:
+        elif nested_depth > 2:
             explanation.append(
-                f"Loops anidados ({loop_info['nested_depth']} niveles) → O(n^{loop_info['nested_depth']})"
+                f"Loops anidados ({nested_depth} niveles) → O(n^{nested_depth})"
             )
         
-        if loop_info['has_logarithmic']:
+        if loop_info.get('has_logarithmic', False):
             explanation.append("Patrón logarítmico detectado (búsqueda binaria o similar)")
         
-        if conditional_info['affects_omega']:
+        if conditional_info.get('affects_omega', False):
             explanation.append(
                 "Condicionales con early return afectan Ω (mejor caso puede ser O(1))"
             )
@@ -326,14 +341,14 @@ class ComplexityAnalyzer:
                 "Condicionales no cambian el orden de complejidad"
             )
         
-        return " | ".join(explanation)
+        return " | ".join(explanation) if explanation else "Sin información de análisis"
 
     def get_complexity(self) -> str:
         """Retorna resumen de complejidades"""
         if not self.complexity_result:
             return "No analysis performed yet"
         
-        result = self.complexity_result
+        result: ComplexityResult = self.complexity_result
         return (
             f"Big-O (peor caso): {result.big_o}\n"
             f"Omega (mejor caso): {result.omega}\n"
@@ -341,12 +356,12 @@ class ComplexityAnalyzer:
             f"Explicación: {result.explanation}"
         )
 
-    def get_detailed_analysis(self) -> Dict:
+    def get_detailed_analysis(self) -> Dict[str, Any]:
         """Retorna análisis completo en formato diccionario"""
         if not self.complexity_result:
             return {"error": "No analysis performed yet"}
         
-        result = self.complexity_result
+        result: ComplexityResult = self.complexity_result
         return {
             "big_o": result.big_o,
             "omega": result.omega,
