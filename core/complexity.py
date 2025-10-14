@@ -75,9 +75,8 @@ class ComplexityAnalyzer:
     def _analyze_loops(self) -> Dict[str, Any]:
         """Analiza loops simples y anidados"""
         lines: List[str] = self.code.split('\n') if self.code else []
-        loop_stack: List[str] = []
+        loop_stack: List[Dict[str, Any]] = []  
         max_depth: int = 0
-        current_depth: int = 0
         
         loop_info: Dict[str, Any] = {
             'simple_loops': 0,
@@ -91,27 +90,26 @@ class ComplexityAnalyzer:
             line_clean: str = line.strip()
             
             # Detectar inicio de loop
-            if re.search(r'\b(for|para)\b', line_clean):
-                current_depth += 1
-                loop_stack.append('for')
+            if re.search(r'\b(for|para)\b.*\b(hacer|do)\b', line_clean, re.IGNORECASE):
+                loop_type = 'for'
+                loop_stack.append({'type': loop_type, 'line': line_clean})
                 loop_info['for_loops'] += 1
-                max_depth = max(max_depth, current_depth)
+                max_depth = max(max_depth, len(loop_stack))
                 
-            elif re.search(r'\bwhile\b|\bmientras\b', line_clean):
-                current_depth += 1
-                loop_stack.append('while')
+            elif re.search(r'\b(while|mientras)\b.*\b(hacer|do)\b', line_clean, re.IGNORECASE):
+                loop_type = 'while'
+                loop_stack.append({'type': loop_type, 'line': line_clean})
                 loop_info['while_loops'] += 1
-                max_depth = max(max_depth, current_depth)
+                max_depth = max(max_depth, len(loop_stack))
                 
                 # Detectar patrón logarítmico (búsqueda binaria)
                 if self._is_logarithmic_pattern(line_clean):
                     loop_info['has_logarithmic'] = True
             
             # Detectar fin de loop
-            elif re.search(r'\b(end|fin)\b', line_clean):
+            elif re.search(r'\b(fin|end)\b\s*(para|for|mientras|while)?\b', line_clean, re.IGNORECASE):
                 if loop_stack:
                     loop_stack.pop()
-                    current_depth -= 1
         
         loop_info['nested_depth'] = max_depth
         loop_info['simple_loops'] = loop_info['for_loops'] + loop_info['while_loops']

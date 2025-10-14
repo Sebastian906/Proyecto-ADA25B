@@ -1,0 +1,81 @@
+{
+  "metadata": {
+    "timestamp": "2025-10-14T15:30:02.475251",
+    "algorithm": "// Llenar la matriz con valores aleatorios entre 1 y 100",
+    "confidence": 60.0
+  },
+  "complexity_analysis": {
+    "matches": {
+      "big_o": true,
+      "omega": true,
+      "theta": true
+    },
+    "differences": [],
+    "auto": {
+      "big_o": "O(1)",
+      "omega": "Ω(1)",
+      "theta": "Θ(1)",
+      "explanation": "Condicionales no cambian el orden de complejidad"
+    }
+  },
+  "pattern_analysis": {
+    "matches": {
+      "detected_auto": 0,
+      "confirmed_by_gemini": 0,
+      "additional_from_gemini": [
+        "divide_y_conquista",
+        "busqueda_binaria",
+        "programacion_dinamica",
+        "backtracking"
+      ],
+      "matched_patterns": []
+    },
+    "differences": [
+      "Patrón 'divide_y_conquista' mencionado por Gemini pero no detectado automáticamente",
+      "Patrón 'busqueda_binaria' mencionado por Gemini pero no detectado automáticamente",
+      "Patrón 'programacion_dinamica' mencionado por Gemini pero no detectado automáticamente",
+      "Patrón 'backtracking' mencionado por Gemini pero no detectado automáticamente"
+    ],
+    "auto": []
+  },
+  "line_analysis": {
+    "match_percentage": 0.0,
+    "differences": [
+      {
+        "line": 1,
+        "auto_cost": null,
+        "gemini_mentioned": false,
+        "costs_match": null
+      },
+      {
+        "line": 2,
+        "auto_cost": null,
+        "gemini_mentioned": false,
+        "costs_match": null
+      },
+      {
+        "line": 3,
+        "auto_cost": null,
+        "gemini_mentioned": false,
+        "costs_match": null
+      }
+    ]
+  },
+  "recurrence_analysis": {
+    "match": false,
+    "comparison": {
+      "auto": "T(n) = O(1)",
+      "gemini": "No detectada"
+    }
+  },
+  "insights": [
+    "[OPTIMIZACIÓN] Optimización o Mejoras\n\nPara este pseudocódigo específico, no hay optimizaciones o mejoras significativas que se puedan aplicar desde una perspectiva algorítmica, por las siguientes razones:\n\n1",
+    "[OBSERVACIÓN] Notación Big-O (Peor Caso): O(1)**\n    *   La cantidad de operaciones (asignación de memoria, posible inicialización) es fija e independiente del tamaño de la entrada (no hay \"entrada\" variable aquí q"
+  ],
+  "recommendations": [
+    "✓ Análisis de complejidad completamente validado por Gemini",
+    "✓ Todos los patrones algorítmicos confirmados",
+    "✗ Baja concordancia en análisis detallado - revisar implementación",
+    "⚠ Revisar ecuación de recurrencia - puede haber diferencias"
+  ]
+}

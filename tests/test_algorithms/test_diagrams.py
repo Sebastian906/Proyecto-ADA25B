@@ -50,4 +50,4 @@ FIN MIENTRAS
 if __name__ == "__main__":
     test_python_code()
     test_pseudocode()
-    print("\n✅ Todos los tests pasaron")
+    print("\n Todos los tests pasaron")

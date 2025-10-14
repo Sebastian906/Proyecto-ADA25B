@@ -106,15 +106,21 @@ class PatternRecognizer:
     def _detect_nested_loops(self) -> bool:
         """Detecta loops anidados específicamente"""
         lines = self.code.split('\n')
-        loop_depth = 0
+        loop_stack = []
         max_depth = 0
         
         for line in lines:
-            if re.search(r'\b(for|para|while|mientras)\b', line):
-                loop_depth += 1
-                max_depth = max(max_depth, loop_depth)
-            elif re.search(r'\b(end|fin)\b', line):
-                loop_depth = max(0, loop_depth - 1)
+            line_clean = line.strip()
+            
+            # Detectar inicio de loop (completo con HACER/DO)
+            if re.search(r'\b(for|para|while|mientras)\b.*\b(hacer|do)\b', line_clean, re.IGNORECASE):
+                loop_stack.append(line_clean)
+                max_depth = max(max_depth, len(loop_stack))
+            
+            # Detectar fin de loop
+            elif re.search(r'\b(fin|end)\b\s*(para|for|mientras|while)?\b', line_clean, re.IGNORECASE):
+                if loop_stack:
+                    loop_stack.pop()
         
         return max_depth >= 2
 
@@ -141,23 +147,44 @@ class PatternRecognizer:
     def _analyze_loop_structure(self):
         """Analiza estructura de loops en detalle"""
         lines = self.code.split('\n')
-        loop_count = 0
+        loop_stack = []
         loop_types = []
         
         for line in lines:
-            if re.search(r'\bfor\b|\bpara\b', line):
-                loop_count += 1
+            line_clean = line.strip()
+            
+            # Detectar inicio de loop (completo con HACER/DO)
+            if re.search(r'\b(for|para)\b.*\b(hacer|do)\b', line_clean, re.IGNORECASE):
+                loop_stack.append('for')
                 loop_types.append('for')
-            elif re.search(r'\bwhile\b|\bmientras\b', line):
-                loop_count += 1
+            elif re.search(r'\b(while|mientras)\b.*\b(hacer|do)\b', line_clean, re.IGNORECASE):
+                loop_stack.append('while')
                 loop_types.append('while')
+            
+            # Detectar fin de loop
+            elif re.search(r'\b(fin|end)\b\s*(para|for|mientras|while)?\b', line_clean, re.IGNORECASE):
+                if loop_stack:
+                    loop_stack.pop()
+        
+        loop_count = len(loop_types)
+        max_depth = 0
+        current_depth = 0
+        
+        # Recalcular profundidad máxima
+        for line in lines:
+            line_clean = line.strip()
+            if re.search(r'\b(for|para|while|mientras)\b.*\b(hacer|do)\b', line_clean, re.IGNORECASE):
+                current_depth += 1
+                max_depth = max(max_depth, current_depth)
+            elif re.search(r'\b(fin|end)\b\s*(para|for|mientras|while)?\b', line_clean, re.IGNORECASE):
+                current_depth = max(0, current_depth - 1)
         
         if loop_count > 0:
             # Actualizar o agregar información de loops
             loop_info = {
                 'name': 'loop_analysis',
                 'description': f'{loop_count} loop(s) detectado(s): {", ".join(loop_types)}',
-                'complexity': self._estimate_loop_complexity(loop_count),
+                'complexity': self._estimate_loop_complexity(max_depth),
                 'confidence': 'high'
             }
             
@@ -196,16 +223,16 @@ class PatternRecognizer:
             if not any(p['name'] == 'recursion_analysis' for p in self.patterns):
                 self.patterns.append(recursion_info)
 
-    def _estimate_loop_complexity(self, loop_count: int) -> str:
+    def _estimate_loop_complexity(self, depth: int) -> str:
         """Estima complejidad basada en número de loops"""
-        if loop_count == 0:
+        if depth == 0:
             return "O(1)"
-        elif loop_count == 1:
+        elif depth == 1:
             return "O(n)"
-        elif loop_count == 2:
+        elif depth == 2:
             return "O(n²)"
         else:
-            return f"O(n^{loop_count})"
+            return f"O(n^{depth})"
 
     def _estimate_recursion_complexity(self, recursive_calls: int) -> str:
         """Estima complejidad de recursión"""
