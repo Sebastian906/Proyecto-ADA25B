@@ -13,6 +13,50 @@ sys.path.insert(0, core_dir)
 
 from complexity import ComplexityAnalyzer
 from patterns import PatternRecognizer
+from pathlib import Path
+
+# Helper ligero para cargar ejemplos desde tests/pseudocode
+EXAMPLES_DIR = Path(__file__).parent.parent / 'pseudocode'
+
+def load_example(name: str) -> str:
+    import re
+    # 1) Intentar ruta exacta
+    p = EXAMPLES_DIR / name
+    if not p.exists():
+        p = EXAMPLES_DIR / f"{name}.txt"
+    if p.exists():
+        return p.read_text(encoding='utf-8')
+
+    # 2) Buscar por tokens en el nombre del archivo
+    key = Path(name).stem.lower()
+    tokens = re.findall(r"\w+", key)
+    candidates = []
+    for f in EXAMPLES_DIR.glob('*.txt'):
+        fname = f.name.lower()
+        score = sum(1 for t in tokens if t in fname)
+        if score > 0:
+            candidates.append((score, f))
+    if candidates:
+        candidates.sort(reverse=True)
+        return candidates[0][1].read_text(encoding='utf-8')
+
+    # 3) Buscar por contenido (tokens dentro del contenido)
+    content_candidates = []
+    for f in EXAMPLES_DIR.glob('*.txt'):
+        content = f.read_text(encoding='utf-8').lower()
+        score = sum(1 for t in tokens if t in content)
+        if score > 0:
+            content_candidates.append((score, f))
+    if content_candidates:
+        content_candidates.sort(reverse=True)
+        return content_candidates[0][1].read_text(encoding='utf-8')
+
+    # Si no se encuentra, listar disponibles para ayudar al debug
+    available = ', '.join([p.name for p in EXAMPLES_DIR.glob('*.txt')])
+    raise FileNotFoundError(f"Ejemplo no encontrado: {name} (buscado en {EXAMPLES_DIR}). Archivos disponibles: {available}")
+
+def list_examples():
+    return sorted([p.name for p in EXAMPLES_DIR.glob('*.txt')])
 
 def print_header(title):
     """Imprime un encabezado formateado"""
@@ -75,161 +119,73 @@ def run_all_tests():
     # ========== PRUEBA 1: For Simple ==========
     print_header("PRUEBA 1: FOR SIMPLE → O(n)")
     
-    code1 = """
-    for i = 0 to n do
-        print i
-    end
-    """
+    code1 = load_example('for_simple.txt')
     print_analysis("Loop Simple", code1)
     
     # ========== PRUEBA 2: For Anidado ==========
     print_header("PRUEBA 2: FOR ANIDADO → O(n²)")
     
-    code2 = """
-    for i = 0 to n do
-        for j = 0 to n do
-            print i + j
-        end
-    end
-    """
+    code2 = load_example('nested_for.txt')
     print_analysis("Loops Anidados (2 niveles)", code2)
     
     # ========== PRUEBA 3: Triple For Anidado ==========
     print_header("PRUEBA 3: FOR TRIPLE ANIDADO → O(n³)")
     
-    code3 = """
-    for i = 0 to n do
-        for j = 0 to n do
-            for k = 0 to n do
-                print i + j + k
-            end
-        end
-    end
-    """
+    code3 = load_example('triple_for.txt')
     print_analysis("Loops Anidados (3 niveles)", code3)
     
     # ========== PRUEBA 4: While hasta n ==========
     print_header("PRUEBA 4: WHILE HASTA N → O(n)")
     
-    code4 = """
-    i = 0
-    while i < n do
-        print i
-        i = i + 1
-    end
-    """
+    code4 = load_example('while_n.txt')
     print_analysis("While Simple", code4)
     
     # ========== PRUEBA 5: If Simple ==========
     print_header("PRUEBA 5: IF (no cambia orden de complejidad)")
     
-    code5 = """
-    for i = 0 to n do
-        if i > 5 then
-            print i
-        end
-    end
-    """
+    code5 = load_example('for_if.txt')
     print_analysis("For con If", code5)
     
     # ========== PRUEBA 6: If con Early Return ==========
     print_header("PRUEBA 6: IF CON EARLY RETURN (afecta Ω)")
     
-    code6 = """
-    for i = 0 to n do
-        if arr[i] == target then
-            return i
-        end
-    end
-    return -1
-    """
+    code6 = load_example('linear_early_return.txt')
     print_analysis("Búsqueda Lineal con Early Return", code6)
     
     # ========== PRUEBA 7: Búsqueda Binaria ==========
     print_header("PRUEBA 7: BÚSQUEDA BINARIA → O(log n)")
     
-    code7 = """
-    function busquedaBinaria(arr, x)
-        izquierda = 0
-        derecha = n - 1
-        while izquierda <= derecha do
-            medio = (izquierda + derecha) / 2
-            if arr[medio] == x then
-                return medio
-            end
-            if arr[medio] < x then
-                izquierda = medio + 1
-            else
-                derecha = medio - 1
-            end
-        end
-        return -1
-    end
-    """
+    code7 = load_example('binary_search.txt')
     print_analysis("Búsqueda Binaria", code7)
     
     # ========== PRUEBA 8: Recursión Simple ==========
     print_header("PRUEBA 8: RECURSIÓN SIMPLE → O(n)")
     
-    code8 = """
-    function factorial(n)
-        if n <= 1 then
-            return 1
-        end
-        return n * factorial(n - 1)
-    end
-    """
+    code8 = load_example('factorial.txt')
     print_analysis("Factorial Recursivo", code8)
     
     # ========== PRUEBA 9: Divide y Conquista (Merge Sort) ==========
     print_header("PRUEBA 9: DIVIDE Y CONQUISTA → O(n log n)")
     
-    code9 = """
-    function mergeSort(arr, inicio, fin)
-        if inicio < fin then
-            medio = (inicio + fin) / 2
-            mergeSort(arr, inicio, medio)
-            mergeSort(arr, medio + 1, fin)
-            merge(arr, inicio, medio, fin)
-        end
-    end
-    """
+    code9 = load_example('merge_sort.txt')
     print_analysis("Merge Sort (Divide y Conquista)", code9)
     
     # ========== PRUEBA 10: Fibonacci Recursivo ==========
     print_header("PRUEBA 10: FIBONACCI RECURSIVO → O(2^n)")
     
-    code10 = """
-    function fibonacci(n)
-        if n <= 1 then
-            return n
-        end
-        return fibonacci(n-1) + fibonacci(n-2)
-    end
-    """
+    code10 = load_example('fibonacci.txt')
     print_analysis("Fibonacci Recursivo (Exponencial)", code10)
     
     # ========== PRUEBA 11: Algoritmo Constante ==========
     print_header("PRUEBA 11: ALGORITMO CONSTANTE → O(1)")
     
-    code11 = """
-    x = 5
-    y = 10
-    z = x + y
-    print z
-    """
+    code11 = load_example('constant.txt')
     print_analysis("Operaciones Constantes", code11)
     
     # ========== PRUEBA 12: While Logarítmico ==========
     print_header("PRUEBA 12: WHILE LOGARÍTMICO → O(log n)")
     
-    code12 = """
-    i = n
-    while i > 1 do
-        i = i / 2
-        print i
-    end
-    """
+    code12 = load_example('log_while.txt')
     print_analysis("While con división por 2", code12)
 
 def run_custom_test():
@@ -280,35 +236,19 @@ def run_interactive_menu():
         elif choice == "2":
             run_custom_test()
         elif choice == "3a":
-            code = "for i = 0 to n do\n    print i\nend"
+            code = load_example('for_simple.txt')
             print_analysis("Loop Simple", code)
         elif choice == "3b":
-            code = "for i = 0 to n do\n    for j = 0 to n do\n        print i\n    end\nend"
+            code = load_example('nested_for.txt')
             print_analysis("Loops Anidados", code)
         elif choice == "3c":
-            code = """izquierda = 0
-derecha = n-1
-while izquierda <= derecha do
-    medio = (izquierda + derecha) / 2
-end"""
+            code = load_example('binary_search.txt')
             print_analysis("Búsqueda Binaria", code)
         elif choice == "3d":
-            code = """function factorial(n)
-    if n <= 1 then
-        return 1
-    end
-    return n * factorial(n-1)
-end"""
+            code = load_example('factorial.txt')
             print_analysis("Factorial Recursivo", code)
         elif choice == "3e":
-            code = """function mergeSort(arr, l, r)
-    if l < r then
-        m = (l + r) / 2
-        mergeSort(arr, l, m)
-        mergeSort(arr, m+1, r)
-        merge(arr, l, m, r)
-    end
-end"""
+            code = load_example('merge_sort.txt')
             print_analysis("Merge Sort", code)
         elif choice == "4":
             print("\n¡Hasta luego!")

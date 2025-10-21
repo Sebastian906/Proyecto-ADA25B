@@ -1,0 +1,7 @@
+PARA i DESDE 0 HASTA n-1 HACER
+    PARA j DESDE 0 HASTA n-1 HACER
+        SI matriz[i][j] > 0 ENTONCES
+            suma = suma + matriz[i][j]
+        FIN SI
+    FIN PARA
+FIN PARA

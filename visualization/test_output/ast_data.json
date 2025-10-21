@@ -1,0 +1,110 @@
+{
+  "n1": {
+    "type": "for_loop",
+    "label": "for_loop: PARA i DESDE 0 HASTA n-1 HACER",
+    "value": "PARA i DESDE 0 HASTA n-1 HACER",
+    "children": [],
+    "complexity": null,
+    "is_recursive": false,
+    "line_number": 1,
+    "exec_count": "n",
+    "time_cost": "O(n)",
+    "space_cost": null
+  },
+  "n2": {
+    "type": "other",
+    "label": "other: arreglo[i] <- i + 1",
+    "value": "arreglo[i] <- i + 1",
+    "children": [],
+    "complexity": null,
+    "is_recursive": false,
+    "line_number": 2,
+    "exec_count": null,
+    "time_cost": null,
+    "space_cost": "O(n)"
+  },
+  "n3": {
+    "type": "statement",
+    "label": "statement: FIN PARA",
+    "value": "FIN PARA",
+    "children": [],
+    "complexity": null,
+    "is_recursive": false,
+    "line_number": 3,
+    "exec_count": null,
+    "time_cost": null,
+    "space_cost": null
+  },
+  "n4": {
+    "type": "while_loop",
+    "label": "while_loop: MIENTRAS izquierda <= derecha ",
+    "value": "MIENTRAS izquierda <= derecha HACER",
+    "children": [],
+    "complexity": null,
+    "is_recursive": false,
+    "line_number": 5,
+    "exec_count": "log n",
+    "time_cost": "O(log n)",
+    "space_cost": null
+  },
+  "n5": {
+    "type": "assignment",
+    "label": "assignment: medio <- (izquierda + derecha)",
+    "value": "medio <- (izquierda + derecha) / 2",
+    "children": [],
+    "complexity": null,
+    "is_recursive": false,
+    "line_number": 6,
+    "exec_count": "1",
+    "time_cost": "O(1)",
+    "space_cost": null
+  },
+  "n6": {
+    "type": "if_statement",
+    "label": "if_statement: SI arreglo[medio] == x ENTONCE",
+    "value": "SI arreglo[medio] == x ENTONCES",
+    "children": [],
+    "complexity": null,
+    "is_recursive": false,
+    "line_number": 7,
+    "exec_count": "1",
+    "time_cost": "O(1)",
+    "space_cost": "O(n)"
+  },
+  "n7": {
+    "type": "assignment",
+    "label": "assignment: encontrado <- VERDADERO",
+    "value": "encontrado <- VERDADERO",
+    "children": [],
+    "complexity": null,
+    "is_recursive": false,
+    "line_number": 8,
+    "exec_count": "1",
+    "time_cost": "O(1)",
+    "space_cost": null
+  },
+  "n8": {
+    "type": "statement",
+    "label": "statement: FIN SI",
+    "value": "FIN SI",
+    "children": [],
+    "complexity": null,
+    "is_recursive": false,
+    "line_number": 9,
+    "exec_count": null,
+    "time_cost": null,
+    "space_cost": null
+  },
+  "n9": {
+    "type": "statement",
+    "label": "statement: FIN MIENTRAS",
+    "value": "FIN MIENTRAS",
+    "children": [],
+    "complexity": null,
+    "is_recursive": false,
+    "line_number": 10,
+    "exec_count": null,
+    "time_cost": null,
+    "space_cost": null
+  }
+}

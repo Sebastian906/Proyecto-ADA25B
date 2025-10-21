@@ -1,0 +1,5 @@
+for i = 0 to n do
+    if i > 5 then
+        print i
+    end
+end

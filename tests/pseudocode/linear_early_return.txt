@@ -1,0 +1,6 @@
+for i = 0 to n do
+    if arr[i] == target then
+        return i
+    end
+end
+return -1

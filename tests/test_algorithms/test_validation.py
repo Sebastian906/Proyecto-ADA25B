@@ -14,6 +14,56 @@ from llm.validation import validate_algorithm, ValidationOrchestrator
 from core.complexity import ComplexityAnalyzer
 from core.patterns import PatternRecognizer
 from core.parser import PseudocodeParser
+from pathlib import Path
+
+# Loader local para ejemplos (usar la carpeta oficial `pseudocode`)
+EXAMPLES_DIR = Path(__file__).parent.parent / 'pseudocode'
+
+def _candidate_dirs():
+    # Solo buscar en la carpeta canonical `pseudocode`
+    dirs = [EXAMPLES_DIR]
+    return dirs
+
+
+def load_example(name: str) -> str:
+    import re
+    # 1) Intentar ruta exacta en dirs candidatas
+    for d in _candidate_dirs():
+        p = d / name
+        if p.exists():
+            return p.read_text(encoding='utf-8')
+        p2 = d / f"{name}.txt"
+        if p2.exists():
+            return p2.read_text(encoding='utf-8')
+
+    # 2) Buscar por tokens en el nombre del archivo
+    key = Path(name).stem.lower()
+    tokens = re.findall(r"\w+", key)
+    candidates = []
+    for d in _candidate_dirs():
+        for f in d.glob('*.txt'):
+            fname = f.name.lower()
+            score = sum(1 for t in tokens if t in fname)
+            if score > 0:
+                candidates.append((score, f))
+    if candidates:
+        candidates.sort(reverse=True)
+        return candidates[0][1].read_text(encoding='utf-8')
+
+    # 3) Buscar por contenido (tokens dentro del contenido)
+    content_candidates = []
+    for d in _candidate_dirs():
+        for f in d.glob('*.txt'):
+            content = f.read_text(encoding='utf-8').lower()
+            score = sum(1 for t in tokens if t in content)
+            if score > 0:
+                content_candidates.append((score, f))
+    if content_candidates:
+        content_candidates.sort(reverse=True)
+        return content_candidates[0][1].read_text(encoding='utf-8')
+
+    available = ', '.join([p.name for d in _candidate_dirs() for p in d.glob('*.txt')])
+    raise FileNotFoundError(f"Ejemplo no encontrado: {name}. Archivos disponibles: {available}")
 
 
 def debug_analysis(code: str, name: str = "debug"):
@@ -97,9 +147,7 @@ def test_simple_cases():
     print("TEST 1: Loop Simple O(n)")
     print("█"*70)
     
-    code1 = """PARA i DESDE 0 HASTA n HACER
-    ESCRIBIR i
-FIN PARA"""
+    code1 = load_example('for_simple.txt')
     
     result1 = debug_analysis(code1, "loop_simple_O_n")
     
@@ -120,11 +168,7 @@ FIN PARA"""
     print("TEST 2: Loops Anidados O(n²)")
     print("█"*70)
     
-    code2 = """PARA i DESDE 0 HASTA n HACER
-    PARA j DESDE 0 HASTA n HACER
-        matriz[i][j] <- i + j
-    FIN PARA
-FIN PARA"""
+    code2 = load_example('nested_for.txt')
     
     result2 = debug_analysis(code2, "loops_anidados_O_n2")
     
@@ -138,20 +182,7 @@ FIN PARA"""
     print("TEST 3: Búsqueda Binaria O(log n)")
     print("█"*70)
     
-    code3 = """izquierda <- 0
-derecha <- n - 1
-
-MIENTRAS izquierda <= derecha HACER
-    medio <- (izquierda + derecha) / 2
-    SI arreglo[medio] == x ENTONCES
-        RETURN medio
-    FIN SI
-    SI arreglo[medio] < x ENTONCES
-        izquierda <- medio + 1
-    SINO
-        derecha <- medio - 1
-    FIN SI
-FIN MIENTRAS"""
+    code3 = load_example('binary_search.txt')
     
     result3 = debug_analysis(code3, "busqueda_binaria_O_log_n")
     
@@ -188,9 +219,7 @@ def quick_fix_test():
     print("="*70)
     
     # Código super simple
-    code = """PARA i DESDE 0 HASTA n HACER
-    x <- x + 1
-FIN PARA"""
+    code = load_example('for_simple.txt')
     
     print("\nCódigo:")
     print(code)

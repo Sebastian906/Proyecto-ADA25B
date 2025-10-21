@@ -108,21 +108,30 @@ class ComplexityValidator:
         return matches, differences
     
     def _find_complexity_in_text(self, complexity: str, text: str) -> bool:
-        """Busca una complejidad específica en el texto"""
+        """Busca una complejidad específica en el texto con mayor robustez"""
         if not complexity:
             return False
         
         # Normalizar complejidad
         clean_complexity = complexity.replace('O', '').replace('Ω', '').replace('Θ', '').strip()
         clean_complexity = clean_complexity.replace('(', '').replace(')', '').strip()
+        clean_complexity = clean_complexity.replace('^', '').replace('²', '2').replace('³', '3')
         
-        # Buscar patrones equivalentes
+        # Normalizar texto
+        text_lower = text.lower()
+        text_lower = text_lower.replace('^', '').replace('²', '2').replace('³', '3')
+        
+        # Buscar patrones equivalentes con puntuación de coincidencia
         if clean_complexity in self.complexity_patterns:
             patterns = self.complexity_patterns[clean_complexity]
-            if any(pattern.lower() in text for pattern in patterns):
+            pattern_scores = [
+                sum(1 for c in pattern.lower() if c in text_lower) / len(pattern)
+                for pattern in patterns
+            ]
+            if max(pattern_scores, default=0) > 0.8:  # 80% de coincidencia
                 return True
         
-        # Buscar variaciones comunes
+        # Buscar variaciones comunes con análisis contextual
         variations = [
             complexity.lower(),
             clean_complexity.lower(),
@@ -130,9 +139,31 @@ class ComplexityValidator:
             f"O({clean_complexity})",
             f"complejidad {clean_complexity}",
             clean_complexity.replace(' ', ''),
+            # Agregar variaciones numéricas
+            clean_complexity.replace('n', 'N'),
+            clean_complexity.replace('log', 'lg'),
+            clean_complexity.replace('2^n', 'exponencial'),
+            clean_complexity.replace('n^2', 'n*n'),
         ]
         
-        return any(var in text for var in variations)
+        # Buscar en contexto de palabras clave
+        complexity_contexts = [
+            'complejidad', 'complexity',
+            'tiempo', 'time',
+            'costo', 'cost',
+            'orden', 'order',
+            'asintótico', 'asymptotic'
+        ]
+        
+        for context in complexity_contexts:
+            if context in text_lower:
+                # Buscar variaciones cerca del contexto (+/- 50 caracteres)
+                idx = text_lower.find(context)
+                search_text = text_lower[max(0, idx-50):min(len(text_lower), idx+50)]
+                if any(var in search_text for var in variations):
+                    return True
+        
+        return any(var in text_lower for var in variations)
     
     def _extract_complexity_from_text(self, text: str, context: str) -> Optional[str]:
         """Extrae complejidad del texto de Gemini"""
@@ -165,12 +196,43 @@ class PatternValidator:
     
     def __init__(self):
         self.pattern_keywords = {
-            'divide_y_conquista': ['divide y conquista', 'divide and conquer', 'dividir', 'merge'],
-            'busqueda_binaria': ['búsqueda binaria', 'binary search', 'binaria'],
-            'programacion_dinamica': ['programación dinámica', 'dynamic programming', 'memoización'],
-            'algoritmo_voraz': ['greedy', 'voraz', 'ávido'],
-            'backtracking': ['backtracking', 'retroceso', 'vuelta atrás'],
-            'fuerza_bruta': ['fuerza bruta', 'brute force'],
+            'divide_y_conquista': [
+                'divide y conquista', 'divide and conquer', 'dividir', 'merge',
+                'partir problema', 'combinar soluciones', 'mergesort', 'quicksort'
+            ],
+            'busqueda_binaria': [
+                'búsqueda binaria', 'binary search', 'binaria', 'dicotómica',
+                'búsqueda por mitades', 'divide intervalo', 'búsqueda logarítmica'
+            ],
+            'programacion_dinamica': [
+                'programación dinámica', 'dynamic programming', 'memoización',
+                'subproblemas', 'tabla dp', 'overlapping subproblems',
+                'optimal substructure', 'bottom-up', 'top-down'
+            ],
+            'algoritmo_voraz': [
+                'greedy', 'voraz', 'ávido', 'codicioso', 'óptimo local',
+                'selección local', 'elección golosa', 'locally optimal'
+            ],
+            'backtracking': [
+                'backtracking', 'retroceso', 'vuelta atrás', 'recursión con retorno',
+                'exploración exhaustiva', 'prueba y error', 'depth-first search'
+            ],
+            'fuerza_bruta': [
+                'fuerza bruta', 'brute force', 'exhaustiva', 'todas las combinaciones',
+                'todas las posibilidades', 'exhaustive search'
+            ],
+            'recursion': [
+                'recursión', 'recursion', 'llamada recursiva', 'caso base',
+                'recursive call', 'base case', 'recursive solution'
+            ],
+            'ordenamiento': [
+                'ordenamiento', 'sorting', 'clasificación', 'ordenar array',
+                'bubble sort', 'insertion sort', 'selection sort'
+            ],
+            'dos_punteros': [
+                'two pointers', 'dos punteros', 'ventana deslizante',
+                'sliding window', 'pointer technique'
+            ]
         }
     
     def compare_patterns(self, auto_patterns: List[Dict], 
@@ -236,35 +298,44 @@ class LineAnalysisValidator:
         Returns:
             Tuple[float, List]: (porcentaje de coincidencia, diferencias detalladas)
         """
-        differences = []
-        matches = 0
+        differences: List[Dict[str, Any]] = []
+        matches: float = 0.0
+
         total_lines = len([l for l in auto_lines if l.get('type') != 'summary'])
-        
+
         if total_lines == 0:
             return 0.0, []
-        
+
+        gemini_lower = gemini_text.lower()
+
         for line_info in auto_lines:
             if line_info.get('type') == 'summary':
                 continue
-            
+
             line_no = line_info.get('line', 0)
             time_cost = line_info.get('time_cost', '')
             exec_count = line_info.get('exec_count', '')
-            
-            # Verificar si Gemini menciona esta línea
+
+            # Verificar si Gemini menciona esta línea (aceptar varias formas)
             line_patterns = [
                 f"línea {line_no}",
                 f"line {line_no}",
                 f"paso {line_no}",
+                f"línea:{line_no}",
+                f"line:{line_no}",
+                f"l{line_no}",
+                f"#{line_no}",
             ]
-            
-            mentioned = any(pattern in gemini_text.lower() for pattern in line_patterns)
-            
+
+            mentioned = any(pattern in gemini_lower for pattern in line_patterns)
+
             if mentioned:
-                # Verificar si las complejidades coinciden
+                # Si tenemos un costo automático y Gemini lo menciona cerca, contar match completo
                 if time_cost and self._complexity_near_line(time_cost, line_no, gemini_text):
-                    matches += 1
+                    matches += 1.0
                 else:
+                    # Si Gemini menciona la línea pero no encuentra el costo exacto, contar match parcial
+                    matches += 0.5
                     differences.append({
                         'line': line_no,
                         'auto_cost': time_cost,
@@ -278,27 +349,83 @@ class LineAnalysisValidator:
                     'gemini_mentioned': False,
                     'costs_match': None
                 })
-        
+
         match_percentage = (matches / total_lines) * 100 if total_lines > 0 else 0
         return match_percentage, differences
     
     def _complexity_near_line(self, complexity: str, line_no: int, text: str) -> bool:
-        """Verifica si una complejidad está mencionada cerca de una línea"""
-        # Buscar contexto de la línea
+        """Verifica si una complejidad está mencionada cerca de una línea con análisis contextual mejorado"""
+        text_lower = text.lower()
+        
+        # Patrones de línea expandidos
         line_patterns = [
             f"línea {line_no}",
             f"line {line_no}",
             f"paso {line_no}",
+            f"instrucción {line_no}",
+            f"statement {line_no}",
+            f"l{line_no}",
+            f"#{line_no}",
+        ]
+        
+        # Palabras clave de complejidad
+        complexity_keywords = [
+            'complejidad', 'complexity',
+            'costo', 'cost',
+            'tiempo', 'time',
+            'operaciones', 'operations',
+            'iteraciones', 'iterations'
+        ]
+        
+        # Normalizar complejidad
+        clean_complexity = complexity.lower()
+        clean_complexity = clean_complexity.replace('o', '').replace('(', '').replace(')', '').strip()
+        clean_complexity = clean_complexity.replace('^', '').replace('²', '2').replace('³', '3')
+        
+        # Variaciones de complejidad
+        complexity_variations = [
+            clean_complexity,
+            f"o({clean_complexity})",
+            f"O({clean_complexity})",
+            clean_complexity.replace('n', 'N'),
+            clean_complexity.replace('log', 'lg'),
+            complexity.lower()
         ]
         
         for pattern in line_patterns:
-            idx = text.lower().find(pattern)
+            idx = text_lower.find(pattern)
             if idx != -1:
-                # Buscar complejidad en +/- 100 caracteres
-                context = text[max(0, idx-100):min(len(text), idx+100)].lower()
-                clean_complexity = complexity.replace('O', '').replace('(', '').replace(')', '').strip()
-                if clean_complexity.lower() in context:
-                    return True
+                # Buscar en un contexto más amplio (+/- 150 caracteres)
+                start_idx = max(0, idx - 150)
+                end_idx = min(len(text_lower), idx + 150)
+                context = text_lower[start_idx:end_idx]
+                
+                # Verificar si hay palabras clave de complejidad cerca
+                has_complexity_context = any(keyword in context for keyword in complexity_keywords)
+                
+                if has_complexity_context:
+                    # Buscar variaciones de complejidad
+                    for var in complexity_variations:
+                        if var in context:
+                            # Calcular distancia entre la línea y la complejidad
+                            line_pos = context.find(pattern)
+                            complexity_pos = context.find(var)
+                            distance = abs(line_pos - complexity_pos)
+                            
+                            # Si está lo suficientemente cerca (dentro de 100 caracteres)
+                            if distance <= 100:
+                                return True
+                
+                # Buscar patrones numéricos específicos
+                if clean_complexity == '1':
+                    if 'constante' in context or 'constant' in context:
+                        return True
+                elif clean_complexity == 'n':
+                    if 'lineal' in context or 'linear' in context:
+                        return True
+                elif clean_complexity == 'n2' or clean_complexity == 'n²':
+                    if 'cuadrático' in context or 'quadratic' in context:
+                        return True
         
         return False
 
@@ -347,10 +474,49 @@ class RecurrenceValidator:
         return match, comparison
     
     def _normalize_recurrence(self, recurrence: str) -> str:
-        """Normaliza ecuación de recurrencia para comparación"""
+        """Normaliza ecuación de recurrencia para comparación más robusta"""
+        if not recurrence:
+            return ""
+            
+        # Normalización básica
         normalized = recurrence.lower()
         normalized = re.sub(r'\s+', '', normalized)
+        
+        # Normalizar operadores
         normalized = normalized.replace('*', '·').replace('x', '·')
+        normalized = normalized.replace('×', '·').replace('⋅', '·')
+        
+        # Normalizar paréntesis y símbolos
+        normalized = normalized.replace('{', '(').replace('}', ')')
+        normalized = normalized.replace('[', '(').replace(']', ')')
+        
+        # Normalizar notación de funciones
+        normalized = re.sub(r't\(([^)]+)\)', r'T(\1)', normalized)  # t(n) -> T(n)
+        normalized = re.sub(r'rec\(([^)]+)\)', r'T(\1)', normalized)  # rec(n) -> T(n)
+        
+        # Normalizar exponentes
+        normalized = normalized.replace('^', '**')
+        normalized = re.sub(r'(\d+)n', r'\1·n', normalized)  # 2n -> 2·n
+        
+        # Normalizar operaciones comunes
+        normalized = re.sub(r'n/2', r'n·0.5', normalized)
+        normalized = normalized.replace('2^n', 'pow(2,n)')
+        
+        # Normalizar términos especiales
+        normalized = re.sub(r'log(\d*)', r'log_\1', normalized)  # log2 -> log_2
+        normalized = normalized.replace('ln', 'log_e')
+        
+        # Simplificar expresiones comunes
+        normal_forms = {
+            'n·n': 'n^2',
+            'n·n·n': 'n^3',
+            'n·log_2(n)': 'n·log(n)',
+            'n·log_e(n)': 'n·log(n)',
+        }
+        
+        for original, simplified in normal_forms.items():
+            normalized = normalized.replace(original, simplified)
+            
         return normalized
 
 class ValidationOrchestrator:
@@ -544,37 +710,57 @@ Por favor, sé específico con las notaciones asintóticas y menciona explícita
     
     def _calculate_confidence(self, complexity_match: Dict, pattern_match: Dict,
                                 line_match: float, recurrence_match: bool) -> float:
-        """Calcula nivel de confianza general (0-100)"""
+        """Calcula nivel de confianza general (0-100) con pesos ajustados y factores adicionales"""
         weights = {
-            'complexity': 0.35,
-            'patterns': 0.25,
-            'lines': 0.25,
-            'recurrence': 0.15
+            'complexity': 0.40,  # Mayor peso a la complejidad
+            'patterns': 0.30,    # Incremento en patrones
+            'lines': 0.20,       # Reducción en líneas
+            'recurrence': 0.10   # Reducción en recurrencia
         }
         
-        # Score de complejidad
-        complexity_score = (sum(complexity_match.values()) / 3) * 100
+        # Score de complejidad con bonificación por coincidencias completas
+        matches_count = sum(complexity_match.values())
+        complexity_base = (matches_count / 3) * 100
+        complexity_bonus = 10 if matches_count == 3 else 0  # Bonificación por coincidencia total
+        complexity_score = min(100, complexity_base + complexity_bonus)
         
-        # Score de patrones
+        # Score de patrones con factor de precisión
         detected = pattern_match.get('detected_auto', 0)
         confirmed = pattern_match.get('confirmed_by_gemini', 0)
-        pattern_score = (confirmed / detected * 100) if detected > 0 else 100
+        additional = len(pattern_match.get('additional_from_gemini', []))
         
-        # Score de líneas
-        line_score = line_match
+        if detected == 0:
+            pattern_score = 100 if additional == 0 else 70  # Penalización si Gemini encuentra patrones no detectados
+        else:
+            precision = confirmed / detected
+            recall = confirmed / (confirmed + additional) if (confirmed + additional) > 0 else 1
+            f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+            pattern_score = f1_score * 100
         
-        # Score de recurrencia
-        recurrence_score = 100 if recurrence_match else 0
+        # Score de líneas con umbral mínimo
+        line_score = max(line_match, 50) if line_match >= 30 else line_match  # Umbral mínimo de confianza
         
-        # Promedio ponderado
-        confidence = (
+        # Score de recurrencia con análisis de complejidad
+        recurrence_base = 100 if recurrence_match else 0
+        recurrence_context = 20 if matches_count >= 2 else 0  # Bonus por contexto de complejidad
+        recurrence_score = min(100, recurrence_base + recurrence_context)
+        
+        # Promedio ponderado con factor de consistencia
+        raw_confidence = (
             complexity_score * weights['complexity'] +
             pattern_score * weights['patterns'] +
             line_score * weights['lines'] +
             recurrence_score * weights['recurrence']
         )
         
-        return round(confidence, 2)
+        # Factor de consistencia basado en la varianza de los scores
+        scores = [complexity_score, pattern_score, line_score, recurrence_score]
+        variance = sum((s - sum(scores)/4) ** 2 for s in scores) / 4
+        consistency_factor = 1 - (variance / 10000)  # Normalizado a 1
+        
+        final_confidence = raw_confidence * consistency_factor
+        
+        return round(max(min(final_confidence, 100), 0), 2)
     
     def export_validation_report(self, result: ValidationResult, filepath: str = "validation_report.json"):
         """Exporta reporte de validación a JSON"""

@@ -132,30 +132,90 @@ class PseudocodeParser:
         lines = code.strip().splitlines()
         results = []
         recurrence = "T(n) = O(1)"  # valor por defecto
-
+        
+        # Control de anidación y contexto
+        loop_stack = []  # Para seguimiento de loops anidados
+        current_depth = 0  # Profundidad actual de anidación
+        max_depth = 0  # Máxima profundidad encontrada
+        loop_variables = set()  # Variables usadas en loops
+        binary_search_vars = set()  # Variables para búsqueda binaria
+        
         for i, line in enumerate(lines, start=1):
             raw_line = line.strip()
             if not raw_line:
                 continue
 
             normalized = self.normalize_spanish(raw_line)
-
             node = ASTNode("statement", value=normalized)
             node.line_no = i
             node.raw = raw_line
 
-            if re.match(r"for", normalized, re.IGNORECASE):
+            # Análisis de bucles con contexto
+            if re.match(r"(for|para)\b", normalized, re.IGNORECASE):
+                current_depth += 1
+                max_depth = max(max_depth, current_depth)
+                
+                # Analizar variables del loop
+                vars_match = re.search(r"(for|para)\s+(\w+)\s+", normalized, re.IGNORECASE)
+                if vars_match:
+                    loop_var = vars_match.group(2)
+                    loop_variables.add(loop_var)
+                
                 node.type = "for_loop"
                 node.exec_count = "n"
-                node.time_cost = "O(n)"
-            elif re.match(r"while", normalized, re.IGNORECASE):
+                
+                # Ajustar complejidad según anidación
+                if current_depth == 1:
+                    node.time_cost = "O(n)"
+                elif current_depth == 2:
+                    node.time_cost = "O(n²)"
+                else:
+                    node.time_cost = f"O(n^{current_depth})"
+                    
+                loop_stack.append(("for", node.time_cost))
+                
+            elif re.match(r"(while|mientras)\b", normalized, re.IGNORECASE):
+                current_depth += 1
+                max_depth = max(max_depth, current_depth)
+                
+                # Detectar patrones de búsqueda binaria
+                is_binary_search = False
+                if ("izquierda" in normalized.lower() and "derecha" in normalized.lower()) or \
+                   ("left" in normalized.lower() and "right" in normalized.lower()):
+                    is_binary_search = True
+                    binary_search_vars.update(["izquierda", "derecha", "medio"])
+                
+                # Detectar patrones de división
+                has_division = re.search(r'\/\s*2|>>\s*1', normalized.lower())
+                
                 node.type = "while_loop"
-                node.exec_count = "log n" if "izquierda" in normalized.lower() and "derecha" in normalized.lower() else "k"
-                node.time_cost = "O(log n)" if node.exec_count == "log n" else "O(k)"
-            elif re.match(r"if", normalized, re.IGNORECASE):
+                if is_binary_search or has_division:
+                    node.exec_count = "log n"
+                    node.time_cost = "O(log n)"
+                else:
+                    # Analizar el patrón del while
+                    if re.search(r'[<>]=?\s*n\b', normalized):
+                        node.exec_count = "n"
+                        node.time_cost = "O(n)"
+                    else:
+                        node.exec_count = "k"
+                        node.time_cost = "O(k)"
+                
+                loop_stack.append(("while", node.time_cost))
+                
+            elif re.match(r"(fin|end)\s*(para|for|mientras|while)?\b", normalized, re.IGNORECASE):
+                if loop_stack:
+                    loop_stack.pop()
+                    current_depth = max(0, current_depth - 1)
+                    
+            elif re.match(r"if|si\b", normalized, re.IGNORECASE):
                 node.type = "if_statement"
                 node.exec_count = "1"
                 node.time_cost = "O(1)"
+                
+                # Detectar early returns o breaks
+                if "return" in normalized.lower() or "break" in normalized.lower():
+                    node.affects_complexity = True
             elif re.match(r"write", normalized, re.IGNORECASE):
                 node.type = "write"
                 node.exec_count = "1"
@@ -190,29 +250,48 @@ class PseudocodeParser:
                 "space_cost": node.space_cost
             })
 
-        # -----------------------------------------------
-        # Cálculo de ecuación de recurrencia
-        # -----------------------------------------------
+        # Análisis detallado de estructura y patrones
         has_recursion = any("function_call" in r["type"] for r in results)
-        has_for = any(r["type"] == "for_loop" for r in results)
-        has_while = any(r["type"] == "while_loop" for r in results)
-
+        loop_types = [r for r in results if r["type"] in ["for_loop", "while_loop"]]
+        pattern_info = {
+            "max_nested_depth": max_depth,
+            "loop_variables": list(loop_variables),
+            "binary_search_pattern": bool(binary_search_vars),
+            "has_early_exit": any(r.get("affects_complexity", False) for r in results),
+            "loop_count": len(loop_types)
+        }
+        
+        # Determinar ecuación de recurrencia basada en patrones
         if has_recursion:
-            recurrence = "T(n) = a·T(n/b) + O(f(n))"
-        elif has_for:
-            recurrence = "T(n) = T(n-1) + O(1)"
-        elif has_while:
-            # Si detectamos una búsqueda binaria por variables clave:
-            binary_pattern = any(
-                "izquierda" in r["raw"].lower() and "derecha" in r["raw"].lower()
-                for r in results
-            )
-            if binary_pattern:
-                recurrence = "T(n) = T(n/2) + O(1)"
+            recursive_calls = sum(1 for r in results if "function_call" in r["type"])
+            if pattern_info["binary_search_pattern"]:
+                recurrence = "T(n) = T(n/2) + O(1)"  # Búsqueda binaria recursiva
+            elif recursive_calls == 1:
+                recurrence = "T(n) = T(n-1) + O(1)"  # Recursión lineal
+            elif recursive_calls == 2:
+                recurrence = "T(n) = 2T(n/2) + O(n)"  # Divide y conquista típico
             else:
-                recurrence = "T(n) = T(n-1) + O(1)"
+                recurrence = f"T(n) = {recursive_calls}T(n/2) + O(n)"
+                
+        elif pattern_info["binary_search_pattern"]:
+            recurrence = "T(n) = T(n/2) + O(1)"  # Búsqueda binaria iterativa
+            
+        elif pattern_info["max_nested_depth"] > 0:
+            if pattern_info["max_nested_depth"] == 1:
+                if any("k" in r["exec_count"] for r in loop_types):
+                    recurrence = "T(n) = O(k·n)"
+                else:
+                    recurrence = "T(n) = T(n-1) + O(1)"
+            elif pattern_info["max_nested_depth"] == 2:
+                recurrence = "T(n) = T(n-1) + O(n)"  # Doble loop
+            else:
+                recurrence = f"T(n) = T(n-1) + O(n^{pattern_info['max_nested_depth']-1})"
         else:
-            recurrence = "T(n) = O(1)"
+            recurrence = "T(n) = O(1)"  # Caso base
+            
+        # Ajustar por early exits
+        if pattern_info["has_early_exit"] and not pattern_info["binary_search_pattern"]:
+            recurrence += " (con posible early exit)"
 
         # Agregar la ecuación final como línea extra de salida
         results.append({

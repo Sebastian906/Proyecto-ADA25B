@@ -116,27 +116,65 @@ class ComplexityAnalyzer:
         
         return loop_info
 
-    def _is_logarithmic_pattern(self, line: str) -> bool:
-        """Detecta patrones logarítmicos como división por 2, búsqueda binaria"""
-        patterns: List[str] = [
-            r'\/\s*2',  # división por 2
-            r'\*\s*2',  # multiplicación por 2
-            r'izquierda.*derecha',  # búsqueda binaria
-            r'left.*right',
-            r'medio',
-            r'middle',
-            r'>>',  # desplazamiento binario
-            r'<<'
-        ]
-        return any(re.search(pattern, line) for pattern in patterns)
+    def _is_logarithmic_pattern(self, line: str) -> Tuple[bool, float]:
+        """Detecta patrones logarítmicos con análisis de confianza"""
+        base_patterns = {
+            # División o multiplicación por 2
+            r'\/\s*2': 0.4,
+            r'\*\s*2': 0.4,
+            r'>>': 0.4,  # Desplazamiento binario
+            r'<<': 0.4,
+            
+            # Búsqueda binaria
+            r'izquierda.*derecha': 0.6,
+            r'left.*right': 0.6,
+            r'medio': 0.5,
+            r'middle': 0.5,
+            
+            # Patrones específicos
+            r'binary.*search': 0.8,
+            r'búsqueda.*binaria': 0.8,
+            r'log': 0.7,
+            r'mitad': 0.5,
+            r'half': 0.5
+        }
+        
+        confidence = 0.0
+        matches = []
+        
+        # Buscar coincidencias de patrones
+        for pattern, score in base_patterns.items():
+            if re.search(pattern, line, re.IGNORECASE):
+                matches.append(pattern)
+                confidence = max(confidence, score)
+        
+        # Análisis de combinaciones
+        if 'medio' in line.lower() or 'middle' in line.lower():
+            if 'izquierda' in line.lower() or 'left' in line.lower():
+                if 'derecha' in line.lower() or 'right' in line.lower():
+                    confidence = max(confidence, 0.9)  # Alta confianza para búsqueda binaria completa
+        
+        # Análisis de contexto
+        if re.search(r'while|mientras', line, re.IGNORECASE):
+            if any(re.search(pattern, line) for pattern in [r'\/\s*2', r'>>', r'<{']):
+                confidence = min(1.0, confidence + 0.2)  # Bonus por while con división
+        
+        # Determinar si es logarítmico basado en umbral de confianza
+        is_logarithmic = confidence >= 0.4
+        
+        return is_logarithmic, confidence
 
     def _analyze_recursion(self) -> Dict[str, Any]:
-        """Analiza recursión y detecta patrones divide y conquista"""
+        """Analiza recursión con análisis semántico mejorado"""
         recursion_info: Dict[str, Any] = {
             'has_recursion': False,
             'pattern': None,
             'recurrence': None,
-            'recursive_calls': 0
+            'recursive_calls': 0,
+            'pattern_confidence': 0.0,
+            'has_base_case': False,
+            'recursive_variables': set(),
+            'operation_type': None
         }
         
         if not self.code:

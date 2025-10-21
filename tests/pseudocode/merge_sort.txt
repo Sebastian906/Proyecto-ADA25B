@@ -1,0 +1,8 @@
+function mergeSort(arr, inicio, fin)
+    if inicio < fin then
+        medio = (inicio + fin) / 2
+        mergeSort(arr, inicio, medio)
+        mergeSort(arr, medio + 1, fin)
+        merge(arr, inicio, medio, fin)
+    end
+end

@@ -1,0 +1,16 @@
+digraph AST {
+    rankdir=TB;
+    node [shape=box, style=rounded, fontname=Arial, fontsize=10];
+    graph [bgcolor=white, pad=0.5];
+
+    n1 [label="for_loop: PARA i DESDE 0 HASTA n-1 HACER", fillcolor="#FFB6C1", style="rounded,filled"];
+    n2 [label="other: arreglo[i] <- i + 1", fillcolor="#D3D3D3", style="rounded,filled"];
+    n3 [label="statement: FIN PARA", fillcolor="#D3D3D3", style="rounded,filled"];
+    n4 [label="while_loop: MIENTRAS izquierda <= derecha ", fillcolor="#FFB6C1", style="rounded,filled"];
+    n5 [label="assignment: medio <- (izquierda + derecha)", fillcolor="#D3D3D3", style="rounded,filled"];
+    n6 [label="if_statement: SI arreglo[medio] == x ENTONCE", fillcolor="#87CEEB", style="rounded,filled"];
+    n7 [label="assignment: encontrado <- VERDADERO", fillcolor="#D3D3D3", style="rounded,filled"];
+    n8 [label="statement: FIN SI", fillcolor="#D3D3D3", style="rounded,filled"];
+    n9 [label="statement: FIN MIENTRAS", fillcolor="#D3D3D3", style="rounded,filled"];
+
+}
