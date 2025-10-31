@@ -1,5 +1,26 @@
 """
-Módulo para reconocimiento de patrones algorítmicos avanzados
+Módulo `patterns.py`
+
+Este módulo se encarga de reconocer patrones algorítmicos comunes y avanzados en pseudocódigo o código fuente.
+Incluye detección específica de patrones como:
+- Divide y conquista
+- Búsqueda binaria
+- Programación dinámica
+- Algoritmos voraces (Greedy)
+- Backtracking
+
+Clases:
+    - PatternRecognizer: Clase principal para analizar y detectar patrones algorítmicos.
+
+Funciones principales:
+    - analyze: Analiza el código en busca de patrones algorítmicos comunes.
+    - _detect_pattern: Detecta si un patrón específico está presente.
+    - _detect_nested_loops: Detecta loops anidados.
+    - _detect_binary_search: Detecta patrones de búsqueda binaria.
+    - _detect_divide_conquer: Detecta patrones de divide y conquista.
+    - _detect_simple_recursion: Detecta recursión simple.
+    - _detect_dynamic_programming: Detecta programación dinámica.
+    - _detect_greedy_algorithm: Detecta algoritmos voraces.
 """
 
 from typing import Dict, List, Tuple
@@ -7,8 +28,17 @@ import re
 
 class PatternRecognizer:
     """
-    Clase para reconocer patrones comunes en algoritmos
-    Incluye detección específica de divide y conquista, patrones iterativos, etc.
+    Clase para reconocer patrones comunes en algoritmos.
+
+    Propósito:
+        Detectar patrones algorítmicos en pseudocódigo o código fuente, como divide y conquista,
+        búsqueda binaria, programación dinámica, algoritmos voraces, y backtracking.
+
+    Métodos principales:
+        - analyze(code: str) -> List[Dict]: Analiza el código en busca de patrones algorítmicos comunes.
+        - add_pattern(pattern_name: str, keywords: List[str], description: str, complexity: str): Agrega un nuevo patrón para reconocimiento.
+        - get_patterns() -> List[Dict]: Retorna los patrones encontrados en el último análisis.
+        - get_summary() -> str: Retorna un resumen legible de los patrones encontrados.
     """
     def __init__(self):
         self.code = None
@@ -58,13 +88,17 @@ class PatternRecognizer:
 
     def analyze(self, code: str) -> List[Dict]:
         """
-        Analiza el código en busca de patrones algorítmicos comunes
-        
+        Analiza el código en busca de patrones algorítmicos comunes.
+
         Args:
-            code (str): Código fuente o pseudocódigo a analizar
-            
+            code (str): Código fuente o pseudocódigo a analizar.
+
         Returns:
-            list: Lista de diccionarios con patrones encontrados y detalles
+            List[Dict]: Lista de diccionarios con patrones encontrados y detalles, incluyendo:
+                - name (str): Nombre del patrón.
+                - description (str): Descripción del patrón.
+                - complexity (str): Complejidad típica del patrón.
+                - confidence (str): Nivel de confianza en la detección (e.g., "high", "medium", "low").
         """
         self.code = code.lower()
         self.patterns = []
@@ -86,7 +120,16 @@ class PatternRecognizer:
         return self.patterns
     
     def _detect_pattern(self, pattern_name: str, pattern_info: Dict) -> bool:
-        """Detecta si un patrón específico está presente con análisis mejorado"""
+        """
+        Detecta si un patrón específico está presente en el código.
+
+        Args:
+            pattern_name (str): Nombre del patrón a detectar.
+            pattern_info (Dict): Información del patrón, incluyendo palabras clave y descripción.
+
+        Returns:
+            bool: True si el patrón es detectado, False en caso contrario.
+        """
         keywords = pattern_info['keywords']
         
         # Para patrones especiales con detección avanzada
@@ -149,7 +192,12 @@ class PatternRecognizer:
         return (has_left_right and has_middle) or (has_division and has_middle)
 
     def _detect_divide_conquer(self) -> bool:
-        """Detecta patrón divide y conquista con análisis mejorado"""
+        """
+        Detecta patrones de divide y conquista en el código.
+
+        Returns:
+            bool: True si se detecta el patrón de divide y conquista, False en caso contrario.
+        """
         # Buscar recursión + división del problema
         has_recursion = bool(re.search(r'\breturn\b.*\(', self.code))
         has_division = bool(re.search(r'\/\s*2|divide|split|merge', self.code))

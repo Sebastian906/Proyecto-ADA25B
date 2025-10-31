@@ -1,6 +1,22 @@
 """
-Módulo para análisis de complejidad de algoritmos (O, Ω, Θ)
-Incluye análisis detallado de loops, recursión y patrones algorítmicos
+Módulo `complexity.py`
+
+Este módulo analiza la complejidad de algoritmos, incluyendo el cálculo de:
+- Big-O (peor caso)
+- Omega (mejor caso)
+- Theta (caso promedio)
+
+También detecta patrones algorítmicos como recursión, loops anidados y patrones logarítmicos.
+
+Clases:
+    - ComplexityResult: Representa el resultado del análisis de complejidad.
+    - ComplexityAnalyzer: Clase principal para analizar la complejidad de algoritmos.
+
+Funciones principales:
+    - analyze: Realiza el análisis completo de un algoritmo.
+    - _analyze_loops: Analiza loops simples y anidados.
+    - _analyze_recursion: Detecta recursión y patrones relacionados.
+    - _analyze_conditionals: Analiza condicionales y su impacto en la complejidad.
 """
 
 from typing import Dict, List, Tuple, Optional, Any
@@ -10,7 +26,17 @@ from dataclasses import dataclass
 
 @dataclass
 class ComplexityResult:
-    """Resultado del análisis de complejidad"""
+    """
+    Representa el resultado del análisis de complejidad.
+
+    Atributos:
+        big_o (str): Complejidad en el peor caso (Big-O).
+        omega (str): Complejidad en el mejor caso (Omega).
+        theta (str): Complejidad en el caso promedio (Theta).
+        explanation (str): Explicación detallada del análisis.
+        recurrence (Optional[str]): Fórmula de recurrencia (si aplica).
+        pattern_type (Optional[str]): Tipo de patrón detectado (e.g., "divide y conquista").
+    """
     big_o: str  # Peor caso
     omega: str  # Mejor caso
     theta: str  # Caso promedio
@@ -21,8 +47,16 @@ class ComplexityResult:
 
 class ComplexityAnalyzer:
     """
-    Clase para analizar la complejidad de algoritmos a partir de su pseudocódigo
-    Detecta O (peor caso), Ω (mejor caso), Θ (caso promedio)
+    Clase para analizar la complejidad de algoritmos a partir de su pseudocódigo.
+
+    Métodos principales:
+        - analyze(code: str) -> ComplexityResult: Realiza el análisis completo de un algoritmo.
+        - _analyze_loops() -> Dict[str, Any]: Analiza loops simples y anidados.
+        - _analyze_recursion() -> Dict[str, Any]: Detecta recursión y patrones relacionados.
+        - _analyze_conditionals() -> Dict[str, Any]: Analiza condicionales y su impacto en la complejidad.
+        - _calculate_big_o(): Calcula la complejidad Big-O (peor caso).
+        - _calculate_omega(): Calcula la complejidad Omega (mejor caso).
+        - _calculate_theta(): Calcula la complejidad Theta (caso promedio).
     """
     
     def __init__(self) -> None:
@@ -34,13 +68,13 @@ class ComplexityAnalyzer:
 
     def analyze(self, code: str) -> ComplexityResult:
         """
-        Analiza la complejidad completa de un algoritmo
-        
+        Realiza el análisis completo de un algoritmo.
+
         Args:
-            code: Pseudocódigo del algoritmo a analizar
-            
+            code (str): Pseudocódigo del algoritmo a analizar.
+
         Returns:
-            ComplexityResult: Objeto con todas las complejidades (O, Ω, Θ)
+            ComplexityResult: Objeto con todas las complejidades (Big-O, Omega, Theta) y una explicación detallada.
         """
         self.code = code.lower()
         self.nested_depth = 0
@@ -73,7 +107,17 @@ class ComplexityAnalyzer:
         return self.complexity_result
 
     def _analyze_loops(self) -> Dict[str, Any]:
-        """Analiza loops simples y anidados"""
+        """
+        Analiza loops simples y anidados en el pseudocódigo.
+
+        Returns:
+            Dict[str, Any]: Información sobre los loops detectados, incluyendo:
+                - simple_loops (int): Número de loops simples.
+                - nested_depth (int): Profundidad máxima de loops anidados.
+                - while_loops (int): Número de loops `while`.
+                - for_loops (int): Número de loops `for`.
+                - has_logarithmic (bool): Indica si se detectaron patrones logarítmicos.
+        """
         lines: List[str] = self.code.split('\n') if self.code else []
         loop_stack: List[Dict[str, Any]] = []  
         max_depth: int = 0
@@ -160,9 +204,9 @@ class ComplexityAnalyzer:
                 confidence = min(1.0, confidence + 0.2)  # Bonus por while con división
         
         # Determinar si es logarítmico basado en umbral de confianza
-        is_logarithmic = confidence >= 0.4
+        is_logarítmico = confidence >= 0.4
         
-        return is_logarithmic, confidence
+        return is_logarítmico, confidence
 
     def _analyze_recursion(self) -> Dict[str, Any]:
         """Analiza recursión con análisis semántico mejorado"""

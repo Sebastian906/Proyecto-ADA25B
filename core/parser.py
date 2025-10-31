@@ -1,7 +1,18 @@
 """
-Parser de Pseudocódigo para Análisis de Complejidad (versión extendida línea a línea)
-Utiliza Lark para parsear estructuras algorítmicas comunes y permite
-analizar ejecución línea por línea para calcular propiedades detalladas.
+Módulo `parser.py`
+
+Este módulo se encarga de analizar pseudocódigo y generar un Árbol de Sintaxis Abstracta (AST) para realizar cálculos y análisis detallados. 
+Utiliza la librería `Lark` para parsear estructuras algorítmicas comunes y permite analizar ejecución línea por línea.
+
+Clases:
+    - ASTNode: Representa un nodo en el Árbol de Sintaxis Abstracta.
+    - PseudocodeTransformer: Transforma pseudocódigo en nodos AST.
+    - PseudocodeParser: Clase principal para parsear pseudocódigo y realizar análisis detallados.
+
+Funciones principales:
+    - parse: Convierte pseudocódigo en un AST.
+    - normalize_spanish: Normaliza pseudocódigo en español a estructuras compatibles.
+    - analyze_by_line: Analiza pseudocódigo línea por línea para extraer información detallada.
 """
 
 from lark import Lark, Transformer, Tree, Token
@@ -11,7 +22,24 @@ from typing import List, Optional, Any
 
 class ASTNode:
     """
-    Nodo base del Árbol de sintaxis abstracta
+    Clase que representa un nodo en el Árbol de Sintaxis Abstracta (AST).
+
+    Args:
+        type_ (str): Tipo del nodo (e.g., "for_loop", "assignment").
+        value (Any, opcional): Valor asociado al nodo.
+        children (List[ASTNode], opcional): Lista de nodos hijos.
+
+    Atributos:
+        type (str): Tipo del nodo.
+        value (Any): Valor asociado al nodo.
+        children (List[ASTNode]): Nodos hijos.
+        line_no (int, opcional): Número de línea en el pseudocódigo.
+        raw (str, opcional): Línea original del pseudocódigo.
+        variables_read (List[str]): Variables leídas en esta línea.
+        variables_written (List[str]): Variables escritas en esta línea.
+        exec_count (str, opcional): Número de ejecuciones estimadas.
+        time_cost (str, opcional): Costo temporal estimado.
+        space_cost (str, opcional): Costo espacial estimado.
     """
     def __init__(self, type_: str, value: Any = None, children: Optional[List['ASTNode']] = None):
         self.type: str = type_
@@ -87,6 +115,14 @@ class PseudocodeTransformer(Transformer):
         return ASTNode("number", value=int(n))
     
 class PseudocodeParser:
+    """
+    Clase principal para parsear pseudocódigo y realizar análisis detallados.
+
+    Métodos:
+        - parse(code: str) -> Tree: Convierte pseudocódigo en un Árbol de Sintaxis Abstracta (AST).
+        - normalize_spanish(code: str) -> str: Normaliza pseudocódigo en español a estructuras compatibles.
+        - analyze_by_line(code: str) -> List[Dict[str, Any]]: Analiza pseudocódigo línea por línea para extraer información detallada.
+    """
     def __init__(self):
         self.grammar = r"""
             start: statement+
@@ -129,6 +165,23 @@ class PseudocodeParser:
         return code
     
     def analyze_by_line(self, code: str) -> List[Dict[str, Any]]:
+        """
+        Analiza pseudocódigo línea por línea para extraer información detallada.
+
+        Args:
+            code (str): Pseudocódigo a analizar.
+
+        Returns:
+            List[Dict[str, Any]]: Lista de diccionarios con información de cada línea, incluyendo:
+                - line (int): Número de línea.
+                - raw (str): Línea original del pseudocódigo.
+                - type (str): Tipo de estructura (e.g., "for_loop", "assignment").
+                - variables_read (List[str]): Variables leídas en esta línea.
+                - variables_written (List[str]): Variables escritas en esta línea.
+                - exec_count (str): Número de ejecuciones estimadas.
+                - time_cost (str): Costo temporal estimado.
+                - space_cost (str): Costo espacial estimado.
+        """
         lines = code.strip().splitlines()
         results = []
         recurrence = "T(n) = O(1)"  # valor por defecto

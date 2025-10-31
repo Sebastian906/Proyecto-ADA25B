@@ -1,6 +1,24 @@
 """
-Módulo de Validación y Comparación de Análisis
-Compara resultados automáticos con respuestas de LLM (Gemini)
+Módulo `validation.py`
+
+Este módulo se encarga de validar y comparar los resultados del análisis automático de pseudocódigo con los proporcionados por un modelo de lenguaje (Gemini). 
+Incluye funcionalidades para:
+- Validar complejidades algorítmicas (Big-O, Omega, Theta).
+- Comparar patrones algorítmicos detectados automáticamente.
+- Analizar línea por línea el pseudocódigo.
+- Validar ecuaciones de recurrencia.
+- Generar informes detallados de validación.
+
+Clases principales:
+    - ValidationResult: Representa el resultado completo de la validación.
+    - ComplexityValidator: Valida y compara análisis de complejidad.
+    - PatternValidator: Valida y compara patrones algorítmicos.
+    - LineAnalysisValidator: Valida análisis línea por línea.
+    - RecurrenceValidator: Valida ecuaciones de recurrencia.
+    - ValidationOrchestrator: Orquesta todo el proceso de validación.
+
+Funciones principales:
+    - validate_algorithm: Realiza la validación completa de un algoritmo.
 """
 
 from typing import Dict, List, Any, Optional, Tuple
@@ -15,7 +33,26 @@ from llm.integration import ask_gemini
 
 @dataclass
 class ValidationResult:
-    """Resultado de la validación comparativa"""
+    """
+    Representa el resultado completo de la validación comparativa.
+
+    Atributos:
+        timestamp (str): Marca de tiempo de la validación.
+        algorithm_name (str): Nombre del algoritmo analizado.
+        complexity_match (Dict[str, bool]): Coincidencias en complejidades (Big-O, Omega, Theta).
+        complexity_differences (List[str]): Diferencias en complejidades.
+        pattern_match (Dict[str, Any]): Coincidencias en patrones algorítmicos.
+        pattern_differences (List[str]): Diferencias en patrones detectados.
+        line_analysis_match (float): Porcentaje de coincidencia en análisis línea por línea.
+        line_differences (List[Dict[str, Any]]): Diferencias en análisis línea por línea.
+        recurrence_match (bool): Indica si la ecuación de recurrencia coincide.
+        recurrence_comparison (Dict[str, str]): Comparación detallada de ecuaciones de recurrencia.
+        overall_confidence (float): Nivel de confianza general en la validación.
+        gemini_insights (List[str]): Observaciones clave extraídas de Gemini.
+        recommendations (List[str]): Recomendaciones basadas en la validación.
+        auto_analysis (Dict[str, Any]): Resultados del análisis automático.
+        gemini_analysis (Dict[str, Any]): Resultados del análisis de Gemini.
+    """
     timestamp: str
     algorithm_name: str
     
@@ -45,7 +82,15 @@ class ValidationResult:
     gemini_analysis: Dict[str, Any] = field(default_factory=dict)
 
 class ComplexityValidator:
-    """Valida y compara análisis de complejidad"""
+    """
+    Valida y compara análisis de complejidad entre resultados automáticos y Gemini.
+
+    Métodos principales:
+        - compare_complexities(auto_result: ComplexityResult, gemini_text: str) -> Tuple[Dict[str, bool], List[str]]:
+          Compara complejidades automáticas con las proporcionadas por Gemini.
+        - _find_complexity_in_text(complexity: str, text: str) -> bool: Busca una complejidad específica en el texto.
+        - _extract_complexity_from_text(text: str, context: str) -> Optional[str]: Extrae complejidades del texto de Gemini.
+    """
     
     def __init__(self):
         self.complexity_patterns = {
@@ -520,7 +565,15 @@ class RecurrenceValidator:
         return normalized
 
 class ValidationOrchestrator:
-    """Orquestador principal de validación"""
+    """
+    Orquesta todo el proceso de validación entre análisis automático y Gemini.
+
+    Métodos principales:
+        - validate_algorithm(code: str, algorithm_name: str) -> ValidationResult:
+          Realiza la validación completa de un algoritmo.
+        - export_validation_report(result: ValidationResult, filepath: str): Exporta el resultado de la validación a un archivo JSON.
+        - print_validation_summary(result: ValidationResult): Imprime un resumen legible de la validación.
+    """
     
     def __init__(self):
         self.complexity_validator = ComplexityValidator()
@@ -850,14 +903,14 @@ Por favor, sé específico con las notaciones asintóticas y menciona explícita
 # Función auxiliar para uso rápido
 def validate_algorithm(code: str, algorithm_name: str = "algorithm") -> ValidationResult:
     """
-    Función de conveniencia para validación rápida
-    
+    Realiza la validación completa de un algoritmo entre análisis automático y Gemini.
+
     Args:
-        code: Pseudocódigo del algoritmo
-        algorithm_name: Nombre del algoritmo
-        
+        code (str): Pseudocódigo del algoritmo.
+        algorithm_name (str): Nombre identificador del algoritmo.
+
     Returns:
-        ValidationResult: Resultado completo de validación
+        ValidationResult: Resultado completo de la validación.
     """
     orchestrator = ValidationOrchestrator()
     result = orchestrator.validate_algorithm(code, algorithm_name)

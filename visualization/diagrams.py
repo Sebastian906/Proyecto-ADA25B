@@ -1,6 +1,21 @@
 """
-Módulo de visualización: Diagramas de AST integrado con Parser, Patterns y Complexity
-Genera diagramas en Graphviz, Mermaid y NetworkX con análisis completo
+Módulo `diagrams.py`
+
+Este módulo se encarga de generar diagramas basados en el análisis de código o pseudocódigo. 
+Incluye funcionalidades para construir Árboles de Sintaxis Abstracta (AST), detectar funciones recursivas, 
+y exportar diagramas en múltiples formatos.
+
+Clases principales:
+    - DiagramNode: Representa un nodo en el diagrama.
+    - ASTDiagramBuilder: Construye diagramas desde código Python o pseudocódigo.
+    - GraphvizExporter: Exporta diagramas a formato Graphviz (DOT y SVG).
+    - MermaidExporter: Exporta diagramas a formato Mermaid (Markdown).
+    - NetworkxExporter: Exporta diagramas a formato PNG usando NetworkX.
+    - RecursionTreeVisualizer: Genera representaciones de árboles de recursión.
+    - JsonExporter: Exporta diagramas a formato JSON.
+
+Funciones principales:
+    - analyze_and_visualize: Función principal para analizar código y generar diagramas.
 """
 
 import ast
@@ -19,7 +34,24 @@ from core.patterns import PatternRecognizer
 
 @dataclass
 class DiagramNode:
-    """Nodo del diagrama con información completa"""
+    """
+    Representa un nodo en el diagrama.
+
+    Atributos:
+        node_id (str): Identificador único del nodo.
+        node_type (str): Tipo del nodo (e.g., "for_loop", "assignment").
+        label (str): Etiqueta del nodo.
+        value (str): Valor asociado al nodo.
+        children (List[str]): Lista de nodos hijos.
+        line_number (Optional[int]): Número de línea en el código.
+        complexity (Optional[str]): Complejidad estimada del nodo.
+        pattern (Optional[str]): Patrón algorítmico detectado.
+        is_recursive (bool): Indica si el nodo es parte de una función recursiva.
+        recursion_depth (Optional[int]): Profundidad de recursión.
+        exec_count (Optional[str]): Número de ejecuciones estimadas.
+        time_cost (Optional[str]): Costo temporal estimado.
+        space_cost (Optional[str]): Costo espacial estimado.
+    """
     node_id: str
     node_type: str
     label: str
@@ -53,7 +85,15 @@ def extract_algorithm_name(code: str) -> str: # type: ignore
         return f"algorithm_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
 class ASTDiagramBuilder:
-    """Construye diagramas desde código Python o pseudocódigo"""
+    """
+    Construye diagramas desde código Python o pseudocódigo.
+
+    Métodos principales:
+        - build_from_python_code(code: str) -> Optional[str]: Construye un AST desde código Python.
+        - build_from_pseudocode(code: str) -> Dict[str, Any]: Construye un análisis desde pseudocódigo.
+        - get_nodes() -> Dict[str, DiagramNode]: Retorna todos los nodos generados.
+        - get_recursive_functions() -> Set[str]: Retorna funciones recursivas detectadas.
+    """
     
     def __init__(self) -> None:
         self.nodes: Dict[str, DiagramNode] = {}
@@ -539,10 +579,22 @@ class JsonExporter:
         print(f"JSON exportado: {filepath}")
 
 
-def analyze_and_visualize(code: str, code_type: str = "python", 
-                          output_dir: str = "visualization/output") -> Dict[str, Any]:
+def analyze_and_visualize(code: str, code_type: str = "python", output_dir: str = "visualization/output") -> Dict[str, Any]:
     """
-    Función principal: Analiza y genera todos los diagramas
+    Analiza código y genera diagramas en múltiples formatos.
+
+    Args:
+        code (str): Código fuente o pseudocódigo a analizar.
+        code_type (str): Tipo de código ("python" o "pseudocode").
+        output_dir (str): Directorio donde se guardarán los diagramas generados.
+
+    Returns:
+        Dict[str, Any]: Resultados del análisis, incluyendo:
+            - code_type (str): Tipo de código analizado.
+            - total_nodes (int): Número total de nodos generados.
+            - recursive_functions (List[str]): Funciones recursivas detectadas.
+            - files (List[str]): Archivos generados (DOT, SVG, PNG, JSON, etc.).
+            - complexity (Optional[Dict[str, Any]]): Resultados del análisis de complejidad.
     """
     print(f"Analizando codigo ({code_type})...\n")
     
