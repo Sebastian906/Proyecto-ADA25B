@@ -177,3 +177,6 @@ pyrightconfig.json
 
 # Files
 visualization/output
+visualization/test_output
+validation_reports
+reports

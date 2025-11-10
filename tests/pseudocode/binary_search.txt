@@ -1,16 +1,23 @@
 function busquedaBinaria(arr, x)
+    # Búsqueda binaria iterativa - O(log n)
     izquierda = 0
     derecha = n - 1
+    
+    # Loop logarítmico: divide espacio de búsqueda por 2
     while izquierda <= derecha do
         medio = (izquierda + derecha) / 2
+        
+        # Mejor caso: elemento encontrado inmediatamente
         if arr[medio] == x then
             return medio
         end
+        
         if arr[medio] < x then
             izquierda = medio + 1
         else
             derecha = medio - 1
         end
     end
+    
     return -1
 end

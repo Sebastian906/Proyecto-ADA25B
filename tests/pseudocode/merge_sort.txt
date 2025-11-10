@@ -1,8 +1,53 @@
 function mergeSort(arr, inicio, fin)
+    # Divide y conquista: T(n) = 2T(n/2) + O(n)
     if inicio < fin then
         medio = (inicio + fin) / 2
         mergeSort(arr, inicio, medio)
         mergeSort(arr, medio + 1, fin)
         merge(arr, inicio, medio, fin)
+    end
+end
+
+function merge(arr, inicio, medio, fin)
+    # Combinar dos mitades ordenadas - O(n)
+    n1 = medio - inicio + 1
+    n2 = fin - medio
+    
+    # Crear arrays temporales
+    for i = 0 to n1 do
+        L[i] = arr[inicio + i]
+    end
+    
+    for j = 0 to n2 do
+        R[j] = arr[medio + 1 + j]
+    end
+    
+    # Mezclar arrays
+    i = 0
+    j = 0
+    k = inicio
+    
+    while i < n1 and j < n2 do
+        if L[i] <= R[j] then
+            arr[k] = L[i]
+            i = i + 1
+        else
+            arr[k] = R[j]
+            j = j + 1
+        end
+        k = k + 1
+    end
+    
+    # Copiar elementos restantes
+    while i < n1 do
+        arr[k] = L[i]
+        i = i + 1
+        k = k + 1
+    end
+    
+    while j < n2 do
+        arr[k] = R[j]
+        j = j + 1
+        k = k + 1
     end
 end
