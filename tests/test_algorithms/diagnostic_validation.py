@@ -201,6 +201,22 @@ def extract_complexities_from_gemini(text: str) -> dict:
     
     text_lower = text.lower()
     
+    # Buscar las complejidades en el texto
+    big_o_match = re.search(r'peor caso \(big-o\):\s*o\(([^)]+)\)', text, re.IGNORECASE)
+    omega_match = re.search(r'mejor caso \(omega\):\s*ω\(([^)]+)\)', text, re.IGNORECASE)
+    theta_match = re.search(r'caso promedio \(theta\):\s*θ\(([^)]+)\)', text, re.IGNORECASE)
+    
+    # Asignar los valores encontrados a las claves esperadas
+    if big_o_match:
+        complexities['big_o'] = f"O({big_o_match.group(1).strip()})"
+    if omega_match:
+        complexities['omega'] = f"Ω({omega_match.group(1).strip()})"
+    if theta_match:
+        complexities['theta'] = f"Θ({theta_match.group(1).strip()})"
+    
+    # Depuración: Imprimir las complejidades extraídas
+    print("Complejidades extraídas de Gemini:", complexities)
+    
     # Estrategia 1: Buscar patrones explícitos
     patterns = {
         'big_o': [
