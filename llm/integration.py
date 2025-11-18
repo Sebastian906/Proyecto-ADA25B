@@ -10,7 +10,20 @@ Funciones principales:
     - fallback_ask_gemini: Genera una respuesta heurística utilizando los analizadores locales.
 """
 
+import warnings
 import os
+import logging
+
+# Suprimir warnings y logs de Google y gRPC
+warnings.filterwarnings('ignore')
+os.environ['GRPC_VERBOSITY'] = 'ERROR'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+# Configurar logging para suprimir mensajes de dependencias
+logging.getLogger('google').setLevel(logging.CRITICAL)
+logging.getLogger('grpc').setLevel(logging.CRITICAL)
+logging.getLogger('gax').setLevel(logging.CRITICAL)
+
 try:
     from dotenv import load_dotenv
     load_dotenv()
