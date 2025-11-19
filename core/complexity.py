@@ -226,26 +226,28 @@ class ComplexityAnalyzer:
         
         lines: List[str] = self.code.split('\n')
         function_name: Optional[str] = None
+        function_def_line: int = -1
         
         # Buscar definición de función
-        for line in lines:
+        for idx, line in enumerate(lines):
             if re.search(r'\b(function|funcion|def|procedimiento)\b', line):
                 match = re.search(r'\b(function|funcion|def|procedimiento)\s+(\w+)', line)
                 if match:
                     function_name = match.group(2)
+                    function_def_line = idx
                     break
         
         if not function_name:
             return recursion_info
         
-        # Contar llamadas recursivas
+        # Contar llamadas recursivas (EXCLUYENDO la definición)
         recursive_calls: int = 0
         has_base_case: bool = False
         divides_problem: bool = False
         
-        for line in lines:
-            # Detectar llamadas recursivas
-            if re.search(rf'\b{function_name}\s*\(', line):
+        for idx, line in enumerate(lines):
+            # Detectar llamadas recursivas (pero NO la línea de definición)
+            if idx != function_def_line and re.search(rf'\b{function_name}\s*\(', line):
                 recursive_calls += 1
             
             # Detectar caso base
@@ -291,16 +293,19 @@ class ComplexityAnalyzer:
         
         lines: List[str] = self.code.split('\n')
         if_depth: int = 0
+        inside_if: bool = False
         
-        for line in lines:
+        for idx, line in enumerate(lines):
             # Contar condicionales
             if re.search(r'\b(if|si)\b', line):
                 if_depth += 1
+                inside_if = True
                 conditional_info['count'] += 1
                 if if_depth > 1:
                     conditional_info['nested'] = True
                 
                 # Detectar early return (afecta mejor caso)
+                # Buscar return en la MISMA línea que el if
                 if re.search(r'\breturn\b', line):
                     conditional_info['early_return'] = True
                     conditional_info['affects_omega'] = True
@@ -308,6 +313,12 @@ class ComplexityAnalyzer:
             elif re.search(r'\b(end|fin)\b', line):
                 if if_depth > 0:
                     if_depth -= 1
+                inside_if = False
+            
+            # Si estamos dentro de un if, también detectar return
+            elif inside_if and re.search(r'\breturn\b', line):
+                conditional_info['early_return'] = True
+                conditional_info['affects_omega'] = True
         
         self.has_conditionals = conditional_info['count'] > 0
         return conditional_info
@@ -353,10 +364,30 @@ class ComplexityAnalyzer:
         if conditional_info.get('early_return', False):
             return "Ω(1)"
         
-        # Si hay recursión sin early return
+        # Si hay recursión, depende del patrón
         if recursion_info.get('has_recursion', False):
-            # El mejor caso suele ser el caso base
-            return "Ω(1)"
+            pattern = recursion_info.get('pattern')
+            
+            # Recursión lineal: siempre hace n operaciones (igual que peor caso)
+            if pattern == 'recursion_lineal':
+                return "Ω(n)"
+            
+            # Divide y conquista simple: log n (igual que peor caso)
+            elif pattern == 'divide_y_conquista_simple':
+                return "Ω(log n)"
+            
+            # Divide y conquista doble: n log n (igual que peor caso)
+            elif pattern == 'divide_y_conquista_doble':
+                return "Ω(n log n)"
+            
+            # Recursión múltiple: exponencial (igual que peor caso)
+            elif pattern == 'recursion_multiple':
+                calls = recursion_info.get('recursive_calls', 2)
+                return f"Ω({calls}^n)"
+            
+            # Por defecto: mejor caso suele ser el caso base
+            else:
+                return "Ω(1)"
         
         # Para loops, el mejor caso es similar al peor caso
         # a menos que haya condicionales con break
