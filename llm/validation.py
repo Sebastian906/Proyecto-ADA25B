@@ -167,16 +167,16 @@ class ComplexityValidator:
         omega = result.omega
         theta = result.theta
         
-        # Normalizar notaciones
+        # Normalizar notaciones (preservando símbolos)
         big_o_norm = self._normalize_complexity(big_o)
         omega_norm = self._normalize_complexity(omega)
         theta_norm = self._normalize_complexity(theta)
         
-        # Obtener índices de orden
+        # Obtener índices de orden (usando lookup normalization para búsqueda)
         try:
-            big_o_idx = self._get_complexity_index(big_o_norm)
-            omega_idx = self._get_complexity_index(omega_norm)
-            theta_idx = self._get_complexity_index(theta_norm)
+            big_o_idx = self._get_complexity_index(self._normalize_for_lookup(big_o_norm))
+            omega_idx = self._get_complexity_index(self._normalize_for_lookup(omega_norm))
+            theta_idx = self._get_complexity_index(self._normalize_for_lookup(theta_norm))
         except ValueError as e:
             errors.append(f"Complejidad no reconocida: {e}")
             return 0.0, errors
@@ -212,8 +212,8 @@ class ComplexityValidator:
         score = 100.0
         
         code_lower = code.lower()
-        big_o_norm = self._normalize_complexity(result.big_o)
-        omega_norm = self._normalize_complexity(result.omega)
+        big_o_norm = self._normalize_complexity(result.big_o).lower()
+        omega_norm = self._normalize_complexity(result.omega).lower()
         
         # Detectar loops anidados
         nested_depth = self._count_nested_loops(code)
@@ -233,7 +233,7 @@ class ComplexityValidator:
             
             # Validar Omega (mejor caso con early return)
             if has_early_return:
-                if omega_norm != 'o(1)':
+                if '1' not in omega_norm:  # Buscar si contiene '1' (para O(1))
                     errors.append(
                         f"ADVERTENCIA: Búsqueda binaria con return temprano, "
                         f"Omega debería ser Ω(1) pero es {result.omega}"
@@ -245,7 +245,7 @@ class ComplexityValidator:
         # Validar según profundidad de loops (para algoritmos NO logarítmicos)
         if nested_depth == 0:
             # Sin loops -> debe ser O(1)
-            if big_o_norm != 'o(1)':
+            if '1' not in big_o_norm:  # Buscar si contiene '1'
                 errors.append(
                     f"ERROR: Sin loops detectados, pero Big-O es {result.big_o}. "
                     f"Debería ser O(1)"
@@ -254,7 +254,10 @@ class ComplexityValidator:
         
         elif nested_depth == 1:
             # 1 loop -> debe ser O(n) o O(log n)
-            if big_o_norm not in ['o(n)', 'o(logn)']:
+            has_n = 'n' in big_o_norm and '2' not in big_o_norm  # O(n) pero no O(n^2)
+            has_log = 'log' in big_o_norm
+            
+            if not (has_n or has_log):
                 # Verificar si es un caso especial (while con división)
                 if not self._detect_binary_search_pattern(code):
                     errors.append(
@@ -265,7 +268,11 @@ class ComplexityValidator:
         
         elif nested_depth == 2:
             # 2 loops anidados -> debe ser O(n²)
-            if 'n2' not in big_o_norm and 'n^2' not in big_o_norm:
+            # Buscar n y (2 o ²)
+            has_n = 'n' in big_o_norm
+            has_square = '2' in big_o_norm or '²' in big_o_norm
+            
+            if not (has_n and has_square):
                 errors.append(
                     f"ERROR: 2 loops anidados detectados, pero Big-O es {result.big_o}. "
                     f"Debería ser O(n²)"
@@ -274,8 +281,10 @@ class ComplexityValidator:
         
         elif nested_depth >= 3:
             # 3+ loops anidados -> debe ser O(n³) o superior
-            expected_complexity = f'o(n^{nested_depth})'
-            if expected_complexity not in big_o_norm:
+            has_n = 'n' in big_o_norm
+            has_power = str(nested_depth) in big_o_norm or chr(8304 + nested_depth) in big_o_norm
+            
+            if not (has_n and has_power):
                 errors.append(
                     f"ERROR: {nested_depth} loops anidados, pero Big-O es {result.big_o}. "
                     f"Debería ser O(n^{nested_depth})"
@@ -368,23 +377,51 @@ class ComplexityValidator:
         return max_depth
     
     def _normalize_complexity(self, complexity: str) -> str:
-        """Normaliza notación de complejidad."""
+        """Normaliza notación de complejidad PRESERVANDO símbolo (O/Ω/Θ)."""
         if not complexity:
             return ""
         
-        # Remover espacios y convertir a minúsculas
+        # Remover espacios
         norm = complexity.strip().replace(' ', '')
         
-        # Normalizar exponentes
+        # Normalizar exponentes (² → ^2, ³ → ^3)
         norm = norm.replace('²', '^2').replace('³', '^3')
+        # Después convertir n^2 → n² para consistencia
         norm = norm.replace('n^2', 'n²').replace('n^3', 'n³')
         
-        # Asegurar formato O(...)
-        if not norm.startswith(('O(', 'Ω(', 'Θ(')):
-            norm = f'O({norm})'
+        # Extraer símbolo y contenido
+        symbol = 'O'
+        content = norm
         
-        # Normalizar a O(...)
-        norm = norm.replace('Ω(', 'O(').replace('Θ(', 'O(')
+        if norm.lower().startswith('o('):
+            symbol = 'O'
+            content = norm[2:-1] if norm.endswith(')') else norm[2:]
+        elif norm.lower().startswith('ω(') or norm.startswith('Ω('):
+            symbol = 'Ω'
+            content = norm[2:-1] if norm.endswith(')') else norm[2:]
+        elif norm.lower().startswith('θ(') or norm.startswith('Θ('):
+            symbol = 'Θ'
+            content = norm[2:-1] if norm.endswith(')') else norm[2:]
+        
+        # Normalizar contenido a minúsculas
+        content = content.lower()
+        
+        # Reconstruir
+        return f'{symbol}({content})'
+    
+    def _normalize_for_lookup(self, complexity: str) -> str:
+        """Normaliza complejidad para búsqueda en lista (siempre retorna O(...))."""
+        if not complexity:
+            return ""
+        
+        # Usar _normalize_complexity primero
+        norm = self._normalize_complexity(complexity)
+        
+        # Reemplazar símbolo por O
+        if norm.startswith('Ω'):
+            norm = 'O' + norm[1:]
+        elif norm.startswith('Θ'):
+            norm = 'O' + norm[1:]
         
         return norm
     
@@ -392,16 +429,20 @@ class ComplexityValidator:
         """Obtiene el índice de orden de una complejidad."""
         norm = self._normalize_complexity(complexity)
         
-        # Buscar en la lista de orden
+        # Buscar en la lista de orden (ignorando espacios)
+        norm_no_space = norm.replace(' ', '')
         for idx, std_complexity in enumerate(self.complexity_order):
-            if norm == std_complexity:
+            std_no_space = std_complexity.replace(' ', '')
+            if norm_no_space == std_no_space:
                 return idx
         
         # Si no se encuentra exactamente, buscar equivalencias
         for idx, std_complexity in enumerate(self.complexity_order):
             if std_complexity in self.equivalences:
+                norm_lower = norm.lower()
                 for equiv in self.equivalences[std_complexity]:
-                    if equiv in norm.lower():
+                    # Comparar sin espacios
+                    if equiv.replace(' ', '') in norm_lower.replace(' ', ''):
                         return idx
         
         raise ValueError(f"Complejidad no reconocida: {complexity}")
@@ -411,15 +452,25 @@ class ComplexityValidator:
         text: str, 
         context: str
     ) -> Optional[str]:
-        """Extrae complejidad del texto de Gemini."""
-        # Buscar patrones cerca del contexto
-        pattern = rf'{context}.*?(O|Ω|Θ)\s*\(\s*([^)]+)\s*\)'
-        match = re.search(pattern, text, re.IGNORECASE)
+        """
+        Extrae complejidad del texto de Gemini.
+        Busca de manera robusta en el texto completo.
+        Soporta O(...), Ω(...), Θ(...) y variantes.
+        """
+        # Buscar patrones cerca del contexto (más flexible)
+        # Soporta: "peor caso", "mejor caso", "caso promedio", "big-o", "omega", "theta"
+        
+        # Buscar O(...), Ω(...), Θ(...) con flexibilidad en el símbolo
+        pattern = rf'{re.escape(context)}.*?((?:[oO]|ω|Ω|θ|Θ)\([^)]+\))'
+        match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
         
         if match:
-            notation = match.group(1)
-            complexity = match.group(2).strip()
-            return f"{notation}({complexity})"
+            return match.group(1)
+        
+        # Fallback: buscar el PRIMER O/Ω/Θ(...) si no encuentra con contexto
+        match = re.search(r'((?:[oO]|ω|Ω|θ|Θ)\([^)]+\))', text)
+        if match:
+            return match.group(1)
         
         return None
     
@@ -430,21 +481,21 @@ class ComplexityValidator:
     ) -> bool:
         """
         Verifica si dos complejidades son equivalentes.
-        MEJORADO: Más tolerante con variaciones de notación.
+        Más tolerante con variaciones de notación.
         """
         if not gemini:
             return False
         
-        auto_norm = self._normalize_complexity(auto).lower()
-        gemini_norm = self._normalize_complexity(gemini).lower()
+        auto_norm = self._normalize_complexity(auto)
+        gemini_norm = self._normalize_complexity(gemini)
         
-        # Comparación directa
-        if auto_norm == gemini_norm:
+        # Comparación directa (case-insensitive)
+        if auto_norm.lower() == gemini_norm.lower():
             return True
         
         # Remover notación para comparar solo la función
-        auto_clean = auto_norm.replace('o(', '').replace('ω(', '').replace('θ(', '').replace(')', '')
-        gemini_clean = gemini_norm.replace('o(', '').replace('ω(', '').replace('θ(', '').replace(')', '')
+        auto_clean = auto_norm.lower().replace('o(', '').replace('ω(', '').replace('θ(', '').replace(')', '')
+        gemini_clean = gemini_norm.lower().replace('o(', '').replace('ω(', '').replace('θ(', '').replace(')', '')
         
         # Normalizar espacios y caracteres especiales
         auto_clean = auto_clean.replace(' ', '').replace('*', '').replace('·', '')
@@ -467,6 +518,25 @@ class ComplexityValidator:
                 return True
         
         return False
+    
+    def _get_complexity_index(self, complexity: str) -> int:
+        """Obtiene el índice de orden de una complejidad."""
+        norm = self._normalize_complexity(complexity)
+        
+        # Buscar en la lista de orden
+        for idx, std_complexity in enumerate(self.complexity_order):
+            if norm == std_complexity:
+                return idx
+        
+        # Si no se encuentra exactamente, buscar equivalencias
+        for idx, std_complexity in enumerate(self.complexity_order):
+            if std_complexity in self.equivalences:
+                for equiv in self.equivalences[std_complexity]:
+                    if equiv in norm.lower():
+                        return idx
+        
+        raise ValueError(f"Complejidad no reconocida: {complexity}")
+
 
 class RecurrenceValidator:
     """
