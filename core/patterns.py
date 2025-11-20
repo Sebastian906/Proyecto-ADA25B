@@ -4,27 +4,17 @@ Módulo `patterns.py`
 Este módulo se encarga de reconocer patrones algorítmicos comunes y avanzados en pseudocódigo o código fuente.
 Incluye detección específica de patrones como:
 - Divide y conquista
-- Búsqueda binaria
 - Programación dinámica
 - Algoritmos voraces (Greedy)
 - Backtracking
-
-Clases:
-    - PatternRecognizer: Clase principal para analizar y detectar patrones algorítmicos.
-
-Funciones principales:
-    - analyze: Analiza el código en busca de patrones algorítmicos comunes.
-    - _detect_pattern: Detecta si un patrón específico está presente.
-    - _detect_nested_loops: Detecta loops anidados.
-    - _detect_binary_search: Detecta patrones de búsqueda binaria.
-    - _detect_divide_conquer: Detecta patrones de divide y conquista.
-    - _detect_simple_recursion: Detecta recursión simple.
-    - _detect_dynamic_programming: Detecta programación dinámica.
-    - _detect_greedy_algorithm: Detecta algoritmos voraces.
+- Branch and Bound
+- Algoritmos de grafos (BFS, DFS, Dijkstra, etc.)
+- Algoritmos de ordenamiento (QuickSort, MergeSort, etc.)
 """
 
 from typing import Dict, List, Tuple
 import re
+
 
 class PatternRecognizer:
     """
@@ -32,7 +22,7 @@ class PatternRecognizer:
 
     Propósito:
         Detectar patrones algorítmicos en pseudocódigo o código fuente, como divide y conquista,
-        búsqueda binaria, programación dinámica, algoritmos voraces, y backtracking.
+        programación dinámica, algoritmos voraces, backtracking, branch and bound, y algoritmos de grafos.
 
     Métodos principales:
         - analyze(code: str) -> List[Dict]: Analiza el código en busca de patrones algorítmicos comunes.
@@ -40,49 +30,45 @@ class PatternRecognizer:
         - get_patterns() -> List[Dict]: Retorna los patrones encontrados en el último análisis.
         - get_summary() -> str: Retorna un resumen legible de los patrones encontrados.
     """
+
     def __init__(self):
         self.code = None
         self.patterns = []
         self.common_patterns = {
-            'loop_simple': {
-                'keywords': ['for', 'para', 'while', 'mientras'],
-                'description': 'Loop simple no anidado',
-                'complexity': 'O(n)'
-            },
-            'loop_anidado': {
-                'keywords': ['for.*for', 'para.*para'],
-                'description': 'Loops anidados',
-                'complexity': 'O(n²) o mayor'
-            },
-            'recursion_simple': {
-                'keywords': ['return.*function', 'return.*funcion'],
-                'description': 'Recursión simple',
-                'complexity': 'Varía según el caso'
-            },
             'divide_y_conquista': {
                 'keywords': ['divide', 'merge', 'combine', '/ 2', '// 2'],
                 'description': 'Divide y Conquista',
                 'complexity': 'O(n log n) típicamente'
             },
-            'busqueda_binaria': {
-                'keywords': ['izquierda', 'derecha', 'medio', 'left', 'right', 'middle'],
-                'description': 'Búsqueda Binaria',
-                'complexity': 'O(log n)'
-            },
             'programacion_dinamica': {
-                'keywords': ['memo', 'table', 'dp', 'cache', 'memorization'],
+                'keywords': ['memo', 'table', 'dp', 'cache', 'subproblem'],
                 'description': 'Programación Dinámica',
                 'complexity': 'Varía, generalmente reduce complejidad exponencial'
             },
             'algoritmo_voraz': {
-                'keywords': ['sort', 'ordenar', 'select', 'seleccionar', 'choose', 'elegir', 'greedy'],
+                'keywords': ['greedy', 'select', 'optimal', 'local'],
                 'description': 'Algoritmo Voraz (Greedy)',
                 'complexity': 'Depende del problema'
             },
             'backtracking': {
-                'keywords': ['backtrack', 'try', 'intentar', 'deshacer', 'undo'],
+                'keywords': ['backtrack', 'try', 'undo', 'solution'],
                 'description': 'Backtracking',
                 'complexity': 'Exponencial en peor caso'
+            },
+            'branch_and_bound': {
+                'keywords': ['bound', 'branch', 'prune', 'tree'],
+                'description': 'Branch and Bound',
+                'complexity': 'Exponencial en peor caso'
+            },
+            'algoritmos_grafos': {
+                'keywords': ['bfs', 'dfs', 'dijkstra', 'prim', 'kruskal'],
+                'description': 'Algoritmos de Grafos',
+                'complexity': 'Varía según el algoritmo'
+            },
+            'ordenamiento': {
+                'keywords': ['quicksort', 'mergesort', 'bubble', 'insertion', 'selection'],
+                'description': 'Algoritmos de Ordenamiento',
+                'complexity': 'Varía según el algoritmo'
             }
         }
 
@@ -98,7 +84,7 @@ class PatternRecognizer:
                 - name (str): Nombre del patrón.
                 - description (str): Descripción del patrón.
                 - complexity (str): Complejidad típica del patrón.
-                - confidence (str): Nivel de confianza en la detección (e.g., "high", "medium", "low").
+                - confidence (float): Nivel de confianza en la detección (en porcentaje).
         """
         self.code = code.lower()
         self.patterns = []
@@ -106,19 +92,16 @@ class PatternRecognizer:
         # Detectar cada patrón
         for pattern_name, pattern_info in self.common_patterns.items():
             if self._detect_pattern(pattern_name, pattern_info):
+                confidence = self._calculate_confidence(pattern_name)
                 self.patterns.append({
                     'name': pattern_name,
                     'description': pattern_info['description'],
                     'complexity': pattern_info['complexity'],
-                    'confidence': self._calculate_confidence(pattern_name)
+                    'confidence': confidence
                 })
-        
-        # Análisis específico de estructura
-        self._analyze_loop_structure()
-        self._analyze_recursion_pattern()
-        
+
         return self.patterns
-    
+
     def _detect_pattern(self, pattern_name: str, pattern_info: Dict) -> bool:
         """
         Detecta si un patrón específico está presente en el código.
@@ -131,37 +114,88 @@ class PatternRecognizer:
             bool: True si el patrón es detectado, False en caso contrario.
         """
         keywords = pattern_info['keywords']
-        
-        # Para patrones especiales con detección avanzada
-        if pattern_name == 'loop_anidado':
-            return self._detect_nested_loops()
-        elif pattern_name == 'busqueda_binaria':
-            return self._detect_binary_search()
-        elif pattern_name == 'divide_y_conquista':
-            return self._detect_divide_conquer()
-        elif pattern_name == 'recursion_simple':
-            return self._detect_simple_recursion()
-        elif pattern_name == 'programacion_dinamica':
-            return self._detect_dynamic_programming()
-        elif pattern_name == 'algoritmo_voraz':
-            return self._detect_greedy_algorithm()
-        
-        # Detección mejorada por palabras clave con contexto
-        context_score = 0
-        max_score = len(keywords)
-        
         for keyword in keywords:
             if re.search(rf'\b{keyword}\b', self.code):
-                context_score += 1
-                # Buscar palabras relacionadas cerca del keyword
-                context = self._get_context_around_keyword(keyword)
-                if context:
-                    context_score += self._analyze_keyword_context(context, pattern_name)
-        
-        # Normalizar puntuación (0 a 1)
-        confidence = context_score / (max_score * 2)  # *2 porque incluimos contexto
-        return confidence > 0.4  # 40% de umbral para considerar detección
+                print(f"Patrón detectado: {pattern_name}, palabra clave: {keyword}")
+                return True
+        return False
 
+    def _calculate_confidence(self, pattern_name: str) -> float:
+        """
+        Calcula el nivel de confianza en la detección de un patrón.
+
+        La confianza se calcula como el porcentaje de palabras clave detectadas
+        en el código en relación con el total de palabras clave asociadas al patrón.
+        Además, se asigna un 100% de confianza si el nombre del patrón coincide
+        con el nombre de una función en el código.
+
+        Args:
+            pattern_name (str): Nombre del patrón detectado.
+
+        Returns:
+            float: Nivel de confianza en porcentaje (0.0 a 100.0).
+        """
+        pattern_info = self.common_patterns[pattern_name]
+        keywords = pattern_info['keywords']
+        matches = sum(1 for keyword in keywords if keyword in self.code)
+        total_keywords = len(keywords)
+
+        # Depuración: Imprimir palabras clave detectadas
+        print(f"Patrón: {pattern_name}")
+        print(f"Palabras clave: {keywords}")
+        print(f"Palabras detectadas: {[keyword for keyword in keywords if keyword in self.code]}")
+        print(f"Confianza calculada: {(matches / total_keywords) * 100 if total_keywords > 0 else 0.0}%")
+
+        if total_keywords == 0:
+            return 0.0
+
+        # Ajustar confianza con un peso adicional para palabras clave críticas
+        critical_keywords = ['merge', 'divide', 'combine', 'dp', 'greedy', 'backtrack']
+        critical_matches = sum(1 for keyword in critical_keywords if keyword in self.code)
+        confidence_percentage = (matches / total_keywords) * 100
+
+        # Incrementar confianza si se detectan palabras clave críticas
+        if critical_matches > 0:
+            confidence_percentage += 10 * critical_matches  # 10% por cada palabra clave crítica detectada
+
+        # Regla adicional: Si el nombre del patrón coincide con el nombre de una función, asignar 100%
+        function_names = re.findall(r'function\s+(\w+)', self.code)
+        if pattern_name in function_names:
+            print(f"El nombre del patrón '{pattern_name}' coincide con el nombre de una función. Asignando 100% de confianza.")
+            return 100.0
+
+        # Limitar la confianza al 100%
+        return min(confidence_percentage, 100.0)
+
+    def get_summary(self) -> str:
+        """
+        Retorna un resumen legible de los patrones encontrados.
+
+        Returns:
+            str: Resumen de los patrones detectados.
+        """
+        if not self.patterns:
+            return "No se detectaron patrones algorítmicos."
+
+        summary = ["Patrones algorítmicos detectados:\n"]
+        for pattern in self.patterns:
+            summary.append(
+                f"- {pattern['description']} (Complejidad: {pattern['complexity']}, "
+                f"Confianza: {pattern['confidence']:.1f}%)"
+            )
+
+        # Calcular confianza promedio
+        avg_confidence = sum(p['confidence'] for p in self.patterns) / len(self.patterns)
+        summary.append(f"\nConfianza promedio de detección: {avg_confidence:.1f}%")
+
+        # Recomendaciones
+        summary.append("\nRecomendaciones para mejorar la detección:")
+        summary.append("- Agregar más documentación en el código")
+        summary.append("- Usar nombres de variables más descriptivos")
+        summary.append("- Estructurar mejor los bloques de código")
+
+        return "\n".join(summary)
+    
     def _detect_nested_loops(self) -> bool:
         """Detecta loops anidados específicamente"""
         lines = self.code.split('\n')
