@@ -60,7 +60,6 @@ class PatternRecognizer:
             self.patterns.append({
                 'name': 'divide_y_conquista',
                 'description': 'Divide y Conquista',
-                'complexity': 'O(n log n)',
                 'confidence': divide_and_conquer_confidence
             })
 
@@ -69,7 +68,6 @@ class PatternRecognizer:
             self.patterns.append({
                 'name': 'programacion_dinamica',
                 'description': 'Programación Dinámica',
-                'complexity': 'Varía',
                 'confidence': dynamic_programming_confidence
             })
 
@@ -78,7 +76,6 @@ class PatternRecognizer:
             self.patterns.append({
                 'name': 'branch_and_bound',
                 'description': 'Branch and Bound',
-                'complexity': 'Exponencial en peor caso',
                 'confidence': branch_and_bound_confidence
             })
 
@@ -87,7 +84,6 @@ class PatternRecognizer:
             self.patterns.append({
                 'name': 'algoritmos_grafos',
                 'description': 'Algoritmos de Grafos',
-                'complexity': 'Varía',
                 'confidence': graph_algorithms_confidence
             })
 
@@ -96,7 +92,6 @@ class PatternRecognizer:
             self.patterns.append({
                 'name': 'ordenamiento',
                 'description': 'Algoritmos de Ordenamiento',
-                'complexity': 'Varía',
                 'confidence': sorting_algorithm_confidence
             })
 
@@ -355,7 +350,6 @@ class PatternRecognizer:
 
             summary.append(
                 f"- {pattern['description']}\n"
-                f"  Complejidad: {pattern['complexity']}\n"
                 f"  Confianza: {numeric_confidence:.1f}%\n"
             )
 
