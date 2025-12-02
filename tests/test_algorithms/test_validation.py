@@ -18,7 +18,8 @@ from llm.validation import (
     validate_efficiency, 
     validate_directory,
     EfficiencyOrchestrator,
-    EfficiencyValidationResult
+    EfficiencyValidationResult,
+    analyze_line_by_line
 )
 from core.complexity import ComplexityAnalyzer
 from core.patterns import PatternRecognizer
@@ -748,11 +749,9 @@ def _generate_quick_summary(
 
 def show_menu():
     """Muestra el menú principal de opciones"""
-    
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print(" SISTEMA DE PRUEBAS - VALIDACIÓN DE EFICIENCIA ALGORÍTMICA")
-    print("="*70)
-    
+    print("=" * 70)
     print("\nOpciones disponibles:")
     print()
     print("  1. Prueba rápida (verificar corrección básica)")
@@ -760,53 +759,55 @@ def show_menu():
     print("  3. Debug interactivo (tu propio código)")
     print("  4. Validar directorio completo")
     print("  5. Listar archivos disponibles")
+    print("  6. Análisis línea por línea y ecuación de recurrencia")  # Nueva opción
     print("  0. Salir")
     print()
 
 def main():
     """Función principal con menú interactivo"""
-    
     while True:
         show_menu()
-        
         try:
-            choice = input("Selecciona una opción (0-5): ").strip()
+            choice = input("Selecciona una opción (0-6): ").strip()
         except (EOFError, KeyboardInterrupt):
             print("\n\n ¡Hasta luego!")
             sys.exit(0)
-        
+
         print()
-        
+
         if choice == "1":
             success = quick_fix_test()
             if not success:
                 print("\n  Se detectaron problemas en el análisis")
-                
+
         elif choice == "2":
             test_simple_cases()
-            
+
         elif choice == "3":
             interactive_debug()
-            
+
         elif choice == "4":
             test_directory()
-            
+
         elif choice == "5":
             examples = list_available_examples()
             print(" Archivos disponibles:")
-            print("-"*70)
+            print("-" * 70)
             for ex in examples:
                 print(f"   • {ex.name:40s} ({ex.stat().st_size} bytes)")
-            print("-"*70)
+            print("-" * 70)
             print(f"Total: {len(examples)} archivos")
-            
+
+        elif choice == "6":  # Nueva opción
+            analyze_line_by_line()
+
         elif choice == "0":
             print(" ¡Hasta luego!")
             sys.exit(0)
-            
+
         else:
             print(" Opción inválida. Intenta de nuevo.")
-        
+
         input("\n  Presiona Enter para continuar...")
 
 if __name__ == "__main__":

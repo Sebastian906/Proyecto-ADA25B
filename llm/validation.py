@@ -30,6 +30,7 @@ from core.complexity import ComplexityAnalyzer, ComplexityResult
 from core.patterns import PatternRecognizer
 from core.parser import PseudocodeParser
 from llm.integration import ask_gemini
+from core.recurrence_analysis import analyze_recurrence
 
 @dataclass
 class EfficiencyValidationResult:
@@ -1514,3 +1515,67 @@ if __name__ == "__main__":
     # Ejemplo 3: Validación en lote de un directorio
     print("\n\nEJEMPLO 3: Validación en lote\n")
     results = validate_directory("tests/pseudocode", "validation_reports")
+    
+def analyze_line_by_line():
+    """
+    Realiza el análisis línea por línea y obtiene la ecuación de recurrencia.
+    Permite analizar archivos existentes o ingresar pseudocódigo desde la consola.
+    """
+    print("\n" + "=" * 70)
+    print(" ANÁLISIS LÍNEA POR LÍNEA Y ECUACIÓN DE RECURRENCIA")
+    print("=" * 70)
+
+    # Preguntar al usuario si desea analizar un archivo o ingresar pseudocódigo
+    print("\nOpciones disponibles:")
+    print("  1. Analizar un archivo existente")
+    print("  2. Ingresar pseudocódigo manualmente")
+    choice = input("Selecciona una opción (1-2): ")
+
+    if choice == "1":
+        # Listar archivos disponibles en tests/pseudocode
+        pseudocode_dir = Path(__file__).parent.parent / "tests" / "pseudocode"
+        files = list(pseudocode_dir.glob("*.txt"))
+        if not files:
+            print("No se encontraron archivos en el directorio 'tests/pseudocode'.")
+            return
+
+        print("\nArchivos disponibles:")
+        for idx, file in enumerate(files, start=1):
+            print(f"  {idx}. {file.name}")
+
+        file_choice = int(input("Selecciona un archivo por número: "))
+        selected_file = files[file_choice - 1]
+
+        # Leer el contenido del archivo
+        with open(selected_file, "r") as f:
+            code_lines = [{"line": line.strip(), "time_cost": 1, "exec_count": 1} for line in f.readlines()]
+
+    elif choice == "2":
+        # Ingresar pseudocódigo manualmente
+        print("\nIngresa tu pseudocódigo línea por línea. Escribe 'END' para finalizar:")
+        code_lines = []
+        while True:
+            line = input(">> ")
+            if line.strip().upper() == "END":
+                break
+            code_lines.append({"line": line.strip(), "time_cost": 1, "exec_count": 1})
+
+    else:
+        print("Opción inválida.")
+        return
+
+    # Realizar el análisis
+    result = analyze_recurrence(code_lines)
+
+    # Mostrar el resultado
+    print("\n ECUACIÓN DE RECURRENCIA:")
+    print(f"   → Detectada: {result['recurrence_eq']}")
+    print(f"   → Solución: {result['solution']}\n")
+
+    print(" DESGLOSE LÍNEA POR LÍNEA:")
+    for step in result["series_steps"]:
+        print(f"   • {step}")
+
+    print("\n" + "=" * 70)
+    print(" ANÁLISIS COMPLETADO")
+    print("=" * 70)
