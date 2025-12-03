@@ -11,7 +11,7 @@ sys.path.insert(0, str(project_root))
 
 from core.complexity import ComplexityAnalyzer
 from core.parser import PseudocodeParser
-from core.patterns import PatternRecognizer
+# from core.patterns import PatternRecognizer
 from llm.integration import ask_gemini
 import re
 
@@ -46,24 +46,24 @@ def diagnose_algorithm(code: str, algorithm_name: str = "test"):
     lines = parser.analyze_by_line(code)
     
     # Extraer recurrencia
-    recurrence = None
-    for item in lines:
-        if item.get('type') == 'summary' and 'recurrence' in item:
-            recurrence = item.get('recurrence')
-            break
+    # recurrence = None
+    # for item in lines:
+    #     if item.get('type') == 'summary' and 'recurrence' in item:
+    #         recurrence = item.get('recurrence')
+    #         break
     
-    if recurrence:
-        print(f"\n Recurrencia:")
-        print(f"   {recurrence}")
+    # if recurrence:
+    #     print(f"\n Recurrencia:")
+    #     print(f"   {recurrence}")
     
     # Patrones
-    recognizer = PatternRecognizer()
-    patterns = recognizer.analyze(code)
+    # recognizer = PatternRecognizer()
+    # patterns = recognizer.analyze(code)
     
-    if patterns:
-        print(f"\n Patrones detectados:")
-        for p in patterns:
-            print(f"   • {p.get('name')}: {p.get('confidence')}")
+    # if patterns:
+    #     print(f"\n Patrones detectados:")
+    #     for p in patterns:
+    #         print(f"   • {p.get('name')}: {p.get('confidence')}")
     
     # ========== ANÁLISIS DE GEMINI ==========
     print("\n" + "="*80)
@@ -75,7 +75,6 @@ def diagnose_algorithm(code: str, algorithm_name: str = "test"):
 1. Peor caso (Big-O): [usa formato O(...)]
 2. Mejor caso (Omega): [usa formato Ω(...) o Omega(...)]
 3. Caso promedio (Theta): [usa formato Θ(...) o Theta(...)]
-4. Recurrencia (si aplica): [usa formato T(n) = ...]
 
 CÓDIGO:
 ```
