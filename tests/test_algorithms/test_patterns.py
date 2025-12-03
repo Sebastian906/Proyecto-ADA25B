@@ -156,7 +156,7 @@ def test_sorting_algorithm():
 
 def analyze_pseudocode_files():
     """
-    Analiza los archivos de pseudocódigo en formato .txt dentro de la carpeta tests/pseudocode.
+    Muestra una lista de archivos en la carpeta tests/pseudocode y permite analizar uno de ellos.
     """
     folder_path = "tests/pseudocode"
     if not os.path.exists(folder_path):
@@ -168,17 +168,35 @@ def analyze_pseudocode_files():
         print(f"No se encontraron archivos .txt en la carpeta '{folder_path}'.")
         return
 
-    print(f"\nAnalizando archivos en '{folder_path}':")
-    for file in files:
-        file_path = os.path.join(folder_path, file)
-        print(f"\nArchivo: {file}")
-        print("-" * 50)
-        with open(file_path, "r", encoding="utf-8") as f:
-            code = f.read()
-            recognizer = PatternRecognizer()
-            patterns = recognizer.analyze(code)
-            print(recognizer.get_summary())
-        print("-" * 50)
+    while True:
+        print("\nArchivos disponibles en 'tests/pseudocode':")
+        for idx, file in enumerate(files, start=1):
+            print(f"{idx}. {file}")
+
+        print(f"{len(files) + 1}. Volver al menú principal")
+        choice = input("Seleccione un archivo por número o vuelva al menú principal: ").strip()
+
+        if choice.isdigit():
+            choice = int(choice)
+            if 1 <= choice <= len(files):
+                selected_file = files[choice - 1]
+                file_path = os.path.join(folder_path, selected_file)
+
+                print(f"\nAnalizando archivo: {selected_file}")
+                print("-" * 50)
+                with open(file_path, "r", encoding="utf-8") as f:
+                    code = f.read()
+                    recognizer = PatternRecognizer()
+                    patterns = recognizer.analyze(code)
+                    print(recognizer.get_summary())
+                print("-" * 50)
+            elif choice == len(files) + 1:
+                # Volver al menú principal
+                break
+            else:
+                print("Número inválido. Intente nuevamente.")
+        else:
+            print("Entrada inválida. Por favor, ingrese un número.")
 
 
 def analyze_test_patterns():
