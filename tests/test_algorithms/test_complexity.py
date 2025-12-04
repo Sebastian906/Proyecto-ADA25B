@@ -66,12 +66,12 @@ def print_header(title):
 
 def print_analysis(name, code, show_code=True):
     """
-    Analiza y muestra resultados para un algoritmo
-    
+    Analiza y muestra resultados para un algoritmo.
+
     Args:
-        name (str): Nombre del algoritmo
-        code (str): Pseudocódigo a analizar
-        show_code (bool): Si mostrar el código completo
+        name (str): Nombre del algoritmo.
+        code (str): Pseudocódigo a analizar.
+        show_code (bool): Si mostrar el código completo.
     """
     print(f"\n{'─' * 80}")
     print(f"PRUEBA: {name}")
@@ -81,112 +81,114 @@ def print_analysis(name, code, show_code=True):
         print("\nPseudocódigo:")
         print(code)
     
-    # Análisis de complejidad
-    print("\nANÁLISIS DE COMPLEJIDAD:")
-    analyzer = ComplexityAnalyzer()
-    result = analyzer.analyze(code)
-    
-    print(f"  • Big-O (Peor caso):     {result.big_o}")
-    print(f"  • Omega (Mejor caso):    {result.omega}")
-    print(f"  • Theta (Caso promedio): {result.theta}")
-    print(f"\n  Explicación: {result.explanation}")
-    
-    if result.recurrence:
-        print(f"  Recurrencia: {result.recurrence}")
-    if result.pattern_type:
-        print(f"  Patrón: {result.pattern_type}")
-    
-    # Análisis de patrones
-    print("\nPATRONES DETECTADOS:")
-    recognizer = PatternRecognizer()
-    patterns = recognizer.analyze(code)
-    
-    if patterns:
-        for pattern in patterns:
-            print(f"  • {pattern['description']}")
-            print(f"    Complejidad esperada: {pattern['complexity']}")
-            print(f"    Confianza: {pattern['confidence']}")
-    else:
-        print("  No se detectaron patrones especiales")
-    
-    print()
+    # Análisis de recurrencia
+    print("\nANÁLISIS DE RECURRENCIA:")
+    recurrence_result = analyze_pseudocode(code)
+    print("\nECUACIÓN DE RECURRENCIA COMPLETA:")
+    print(f"  T(n) = {recurrence_result['recurrence']}")
+    print("\nECUACIÓN DE RECURRENCIA SIMPLIFICADA:")
+    print(f"  T(n) = {recurrence_result['simplified_recurrence']}")
+    print("\nCONSTANTES:")
+    for const, value in recurrence_result["constants"].items():
+        print(f"  {const}: {value}")
+    print(f"\nCOMPLEJIDAD ESPACIAL: {recurrence_result['space_complexity']}")
+
+def analyze_pseudocode(code: str):
+    """
+    Analiza el pseudocódigo línea por línea, asigna costos y construye la ecuación de recurrencia.
+
+    Args:
+        code (str): Pseudocódigo a analizar.
+
+    Returns:
+        dict: Resultados del análisis, incluyendo la ecuación de recurrencia completa y simplificada.
+    """
+    lines = code.strip().split("\n")
+    equation = []
+    constants = {}
+    space_usage = 0
+    indent_level = 0
+
+    print("\nANÁLISIS LÍNEA POR LÍNEA:")
+    print("=" * 80)
+
+    for idx, line in enumerate(lines, start=1):
+        line = line.strip()
+        if not line:
+            continue
+
+        # Identificar el tipo de línea y asignar costos
+        if line.startswith("for") or line.startswith("while"):
+            indent_level += 1
+            constants[f"C{idx}"] = f"O(n^{indent_level})"
+            equation.append(f"C{idx}*n^{indent_level}")
+            print(f"{line:<50} --------------------- C{idx}*n^{indent_level}")
+        elif line.startswith("if") or line.startswith("else"):
+            constants[f"C{idx}"] = "O(1)"
+            equation.append(f"C{idx}")
+            print(f"{line:<50} --------------------- C{idx}")
+        else:
+            constants[f"C{idx}"] = "O(1)"
+            equation.append(f"C{idx}")
+            print(f"{line:<50} --------------------- C{idx}")
+
+        # Espacio adicional si se detectan estructuras de datos
+        if "array" in line or "list" in line or "matrix" in line:
+            space_usage += 1
+
+    # Construir la ecuación de recurrencia completa
+    recurrence = " + ".join(equation)
+
+    # Simplificar la ecuación de recurrencia agrupando constantes
+    grouped_terms = []
+    constant_count = 0  # Contador para las constantes independientes
+
+    for term in equation:
+        if "*n" in term:
+            grouped_terms.append(term)  # Mantener términos dependientes de n
+        else:
+            constant_count += 1  # Contar las constantes independientes
+
+    # Si hay constantes independientes, agruparlas como una sola 'C'
+    if constant_count > 0:
+        grouped_terms.append("C")
+
+    simplified_equation = " + ".join(grouped_terms)
+
+    return {
+        "recurrence": recurrence,
+        "simplified_recurrence": simplified_equation,
+        "constants": constants,
+        "space_complexity": f"O({space_usage})" if space_usage > 0 else "O(1)"
+    }
 
 def run_all_tests():
-    """Ejecuta todas las pruebas de ejemplo"""
+    """Muestra los archivos disponibles y permite seleccionar uno para ejecutar la prueba"""
     
-    print_header("SUITE DE PRUEBAS - ANALIZADOR DE COMPLEJIDAD")
+    print_header("LISTA DE ARCHIVOS DISPONIBLES EN 'test/pseudocode'")
     
-    # ========== PRUEBA 1: For Simple ==========
-    print_header("PRUEBA 1: FOR SIMPLE → O(n)")
+    # Listar los archivos disponibles en el directorio EXAMPLES_DIR
+    examples = list_examples()
+    if not examples:
+        print("No se encontraron archivos en el directorio 'test/pseudocode'.")
+        return
     
-    code1 = load_example('for_simple.txt')
-    print_analysis("Loop Simple", code1)
+    print("Archivos disponibles:")
+    for idx, example in enumerate(examples, start=1):
+        print(f"  {idx}. {example}")
     
-    # ========== PRUEBA 2: For Anidado ==========
-    print_header("PRUEBA 2: FOR ANIDADO → O(n²)")
-    
-    code2 = load_example('nested_for.txt')
-    print_analysis("Loops Anidados (2 niveles)", code2)
-    
-    # ========== PRUEBA 3: Triple For Anidado ==========
-    print_header("PRUEBA 3: FOR TRIPLE ANIDADO → O(n³)")
-    
-    code3 = load_example('triple_for.txt')
-    print_analysis("Loops Anidados (3 niveles)", code3)
-    
-    # ========== PRUEBA 4: While hasta n ==========
-    print_header("PRUEBA 4: WHILE HASTA N → O(n)")
-    
-    code4 = load_example('while_n.txt')
-    print_analysis("While Simple", code4)
-    
-    # ========== PRUEBA 5: If Simple ==========
-    print_header("PRUEBA 5: IF (no cambia orden de complejidad)")
-    
-    code5 = load_example('for_if.txt')
-    print_analysis("For con If", code5)
-    
-    # ========== PRUEBA 6: If con Early Return ==========
-    print_header("PRUEBA 6: IF CON EARLY RETURN (afecta Ω)")
-    
-    code6 = load_example('linear_early_return.txt')
-    print_analysis("Búsqueda Lineal con Early Return", code6)
-    
-    # ========== PRUEBA 7: Búsqueda Binaria ==========
-    print_header("PRUEBA 7: BÚSQUEDA BINARIA → O(log n)")
-    
-    code7 = load_example('binary_search.txt')
-    print_analysis("Búsqueda Binaria", code7)
-    
-    # ========== PRUEBA 8: Recursión Simple ==========
-    print_header("PRUEBA 8: RECURSIÓN SIMPLE → O(n)")
-    
-    code8 = load_example('factorial.txt')
-    print_analysis("Factorial Recursivo", code8)
-    
-    # ========== PRUEBA 9: Divide y Conquista (Merge Sort) ==========
-    print_header("PRUEBA 9: DIVIDE Y CONQUISTA → O(n log n)")
-    
-    code9 = load_example('merge_sort.txt')
-    print_analysis("Merge Sort (Divide y Conquista)", code9)
-    
-    # ========== PRUEBA 10: Fibonacci Recursivo ==========
-    print_header("PRUEBA 10: FIBONACCI RECURSIVO → O(2^n)")
-    
-    code10 = load_example('fibonacci.txt')
-    print_analysis("Fibonacci Recursivo (Exponencial)", code10)
-    
-    # ========== PRUEBA 11: Algoritmo Constante ==========
-    print_header("PRUEBA 11: ALGORITMO CONSTANTE → O(1)")
-    
-    code11 = load_example('constant.txt')
-    print_analysis("Operaciones Constantes", code11)
-    
-    # ========== PRUEBA 12: While Logarítmico ==========
-    print_header("PRUEBA 12: WHILE LOGARÍTMICO → O(log n)")
-    
-    code12 = load_example('log_while.txt')
-    print_analysis("While con división por 2", code12)
+    print("\nSelecciona un archivo para analizar (ingresa el número correspondiente):")
+    try:
+        choice = int(input("Número: ").strip())
+        if 1 <= choice <= len(examples):
+            selected_file = examples[choice - 1]
+            print(f"\nEjecutando prueba para: {selected_file}")
+            code = load_example(selected_file)
+            print_analysis(selected_file, code)
+        else:
+            print("Número inválido. Por favor, selecciona un número de la lista.")
+    except ValueError:
+        print("Entrada inválida. Por favor, ingresa un número.")
 
 def run_custom_test():
     """Permite probar código personalizado"""
@@ -218,7 +220,7 @@ def run_interactive_menu():
         print("\n" + "=" * 80)
         print("  MENÚ DE PRUEBAS - ANALIZADOR DE COMPLEJIDAD")
         print("=" * 80)
-        print("\n1. Ejecutar todas las pruebas (recomendado)")
+        print("\n1. Ejecutar pruebas (recomendado)")
         print("2. Probar código personalizado")
         print("3. Ver ejemplos específicos:")
         print("   a. Loop simple")
@@ -235,19 +237,19 @@ def run_interactive_menu():
             run_all_tests()
         elif choice == "2":
             run_custom_test()
-        elif choice == "3a":
+        elif choice == "3a" or choice == "3 a":
             code = load_example('for_simple.txt')
             print_analysis("Loop Simple", code)
-        elif choice == "3b":
+        elif choice == "3b" or choice == "3 b":
             code = load_example('nested_for.txt')
             print_analysis("Loops Anidados", code)
-        elif choice == "3c":
+        elif choice == "3c" or choice == "3 c":
             code = load_example('binary_search.txt')
             print_analysis("Búsqueda Binaria", code)
-        elif choice == "3d":
+        elif choice == "3d" or choice == "3 d":
             code = load_example('factorial.txt')
             print_analysis("Factorial Recursivo", code)
-        elif choice == "3e":
+        elif choice == "3e" or choice == "3 e":
             code = load_example('merge_sort.txt')
             print_analysis("Merge Sort", code)
         elif choice == "4":
