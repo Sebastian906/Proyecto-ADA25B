@@ -30,6 +30,7 @@ from core.complexity import ComplexityAnalyzer, ComplexityResult
 from core.patterns import PatternRecognizer
 from core.parser import PseudocodeParser
 from llm.integration import ask_gemini
+from core.recurrence_analysis import analyze_recurrence
 
 @dataclass
 class EfficiencyValidationResult:
@@ -308,7 +309,69 @@ class ComplexityValidator:
         criteria_met = sum([has_pointers, has_middle, has_division, has_loop])
         
         return criteria_met >= 3
-    
+
+    def _detect_divide_and_conquer(self, debug: bool = False) -> float:
+        """
+        Detecta patrones de Divide y Conquista y calcula la confianza basada en las partes clave.
+
+        Args:
+            debug (bool): Si es True, imprime mensajes de depuración.
+
+        Returns:
+            float: Confianza en porcentaje (0.0 a 100.0).
+        """
+        confidence = 0.0
+
+        # Pesos de las partes clave
+        weights = {
+            'recursion': 50,  # Recursión es el componente más importante
+            'division': 30,   # División del problema es importante
+            'combination': 20 # Combinación de resultados es menos importante
+        }
+
+        # Detectar recursión
+        has_recursion = bool(re.search(r'\breturn\b.*\(', self.code))
+        if has_recursion:
+            confidence += weights['recursion']
+
+        # Detectar división del problema
+        has_division = bool(re.search(r'/ 2|// 2', self.code))
+        if has_division:
+            confidence += weights['division']
+
+        # Detectar combinación de resultados
+        has_combination = bool(re.search(r'merge|combine', self.code))
+        if has_combination:
+            confidence += weights['combination']
+
+        if debug:
+            print(f"Divide y Conquista - Recursión: {has_recursion}, División: {has_division}, Combinación: {has_combination}, Confianza: {confidence:.1f}%")
+        return confidence
+
+    def _detect_dynamic_programming(self, debug: bool = False) -> float:
+        confidence = 0.0
+        weights = {
+            'table': 40,
+            'subproblem_access': 40,
+            'nested_loops': 20
+        }
+
+        has_table = bool(re.search(r'\[\w+\]', self.code))
+        if has_table:
+            confidence += weights['table']
+
+        has_subproblem_access = bool(re.search(r'\[\w+\s*-\s*1\]', self.code))
+        if has_subproblem_access:
+            confidence += weights['subproblem_access']
+
+        has_nested_loops = self._detect_nested_loops()
+        if has_nested_loops:
+            confidence += weights['nested_loops']
+
+        if debug:
+            print(f"Programación Dinámica - Tabla: {has_table}, Subproblemas: {has_subproblem_access}, Bucles anidados: {has_nested_loops}, Confianza: {confidence:.1f}%")
+        return confidence
+
     def _validate_with_gemini(
         self, 
         result: ComplexityResult,
@@ -1204,24 +1267,24 @@ EJEMPLO DE RESPUESTA CORRECTA:
         print(f"Timestamp: {result.timestamp}")
         print(f"\n{'─'*70}")
         
-        # PUNTUACIÓN GENERAL
-        print(f"\n PUNTUACIÓN GENERAL: {result.overall_efficiency_score:.1f}/100")
-        print(f"   Rigor Matemático: {result.mathematical_rigor}")
+        # # PUNTUACIÓN GENERAL
+        # print(f"\n PUNTUACIÓN GENERAL: {result.overall_efficiency_score:.1f}/100")
+        # print(f"   Rigor Matemático: {result.mathematical_rigor}")
         
-        # Barra de progreso visual
-        bar_length = 50
-        filled = int(bar_length * result.overall_efficiency_score / 100)
-        bar = '█' * filled + '░' * (bar_length - filled)
-        print(f"   [{bar}] {result.overall_efficiency_score:.1f}%")
+        # # Barra de progreso visual
+        # bar_length = 50
+        # filled = int(bar_length * result.overall_efficiency_score / 100)
+        # bar = '█' * filled + '░' * (bar_length - filled)
+        # print(f"   [{bar}] {result.overall_efficiency_score:.1f}%")
         
-        print(f"\n{'─'*70}")
+        # print(f"\n{'─'*70}")
         
-        # DESGLOSE POR COMPONENTE
-        print("\n DESGLOSE POR COMPONENTE:")
-        print(f"   ├─ Complejidad (50%): {result.complexity_correctness:.1f}/100")
-        print(f"   ├─ Recurrencia (30%): {result.recurrence_correctness:.1f}/100")
-        print(f"   ├─ Costos (15%):      {result.cost_analysis_correctness:.1f}/100")
-        print(f"   └─ Patrones (5%):     {result.pattern_correctness:.1f}/100")
+        # # DESGLOSE POR COMPONENTE
+        # print("\n DESGLOSE POR COMPONENTE:")
+        # print(f"   ├─ Complejidad (50%): {result.complexity_correctness:.1f}/100")
+        # print(f"   ├─ Recurrencia (30%): {result.recurrence_correctness:.1f}/100")
+        # print(f"   ├─ Costos (15%):      {result.cost_analysis_correctness:.1f}/100")
+        # print(f"   └─ Patrones (5%):     {result.pattern_correctness:.1f}/100")
         
         # ANÁLISIS DE COMPLEJIDAD
         print(f"\n{'─'*70}")
@@ -1239,17 +1302,17 @@ EJEMPLO DE RESPUESTA CORRECTA:
             print(f"   Theta:  {gemini_comp.get('theta', 'N/A')}")
         
         # RECURRENCIA
-        if result.auto_analysis.get('recurrence'):
-            print(f"\n{'─'*70}")
-            print("\n ECUACIÓN DE RECURRENCIA:")
-            print(f"   Detectada: {result.auto_analysis.get('recurrence')}")
+        # if result.auto_analysis.get('recurrence'):
+        #     print(f"\n{'─'*70}")
+        #     print("\n ECUACIÓN DE RECURRENCIA:")
+        #     print(f"   Detectada: {result.auto_analysis.get('recurrence')}")
             
-            expected = result.recurrence_details.get('expected_complexity')
-            actual = result.recurrence_details.get('actual_complexity')
-            if expected and actual:
-                match = "✓" if expected == actual else "✗"
-                print(f"   Solución esperada: {expected}")
-                print(f"   Big-O calculado:   {actual} {match}")
+        #     expected = result.recurrence_details.get('expected_complexity')
+        #     actual = result.recurrence_details.get('actual_complexity')
+        #     if expected and actual:
+        #         match = "✓" if expected == actual else "✗"
+        #         print(f"   Solución esperada: {expected}")
+        #         print(f"   Big-O calculado:   {actual} {match}")
         
         # ERRORES CRÍTICOS
         if result.critical_errors:
@@ -1424,10 +1487,10 @@ EJEMPLO DE RESPUESTA CORRECTA:
         print(f"Total de archivos: {summary['total_files']}")
         print(f"Puntuación promedio: {summary['statistics']['avg_score']:.1f}/100")
         print(f"Rango: {summary['statistics']['min_score']:.1f} - {summary['statistics']['max_score']:.1f}")
-        print(f"\nRigor Matemático:")
-        print(f"  HIGH:   {summary['statistics']['high_rigor']} archivos")
-        print(f"  MEDIUM: {summary['statistics']['medium_rigor']} archivos")
-        print(f"  LOW:    {summary['statistics']['low_rigor']} archivos")
+        # print(f"\nRigor Matemático:")
+        # print(f"  HIGH:   {summary['statistics']['high_rigor']} archivos")
+        # print(f"  MEDIUM: {summary['statistics']['medium_rigor']} archivos")
+        # print(f"  LOW:    {summary['statistics']['low_rigor']} archivos")
         print(f"\n Reporte consolidado: {summary_path}")
         print(f"{'='*70}\n")
 
@@ -1514,3 +1577,67 @@ if __name__ == "__main__":
     # Ejemplo 3: Validación en lote de un directorio
     print("\n\nEJEMPLO 3: Validación en lote\n")
     results = validate_directory("tests/pseudocode", "validation_reports")
+    
+def analyze_line_by_line():
+    """
+    Realiza el análisis línea por línea y obtiene la ecuación de recurrencia.
+    Permite analizar archivos existentes o ingresar pseudocódigo desde la consola.
+    """
+    print("\n" + "=" * 70)
+    print(" ANÁLISIS LÍNEA POR LÍNEA Y ECUACIÓN DE RECURRENCIA")
+    print("=" * 70)
+
+    # Preguntar al usuario si desea analizar un archivo o ingresar pseudocódigo
+    print("\nOpciones disponibles:")
+    print("  1. Analizar un archivo existente")
+    print("  2. Ingresar pseudocódigo manualmente")
+    choice = input("Selecciona una opción (1-2): ").strip()  # Definir la variable `choice`
+
+    if choice == "1":
+        # Listar archivos disponibles en tests/pseudocode
+        pseudocode_dir = Path(__file__).parent.parent / "tests" / "pseudocode"
+        files = list(pseudocode_dir.glob("*.txt"))
+        if not files:
+            print("No se encontraron archivos en el directorio 'tests/pseudocode'.")
+            return
+
+        print("\nArchivos disponibles:")
+        for idx, file in enumerate(files, start=1):
+            print(f"  {idx}. {file.name}")
+
+        file_choice = int(input("Selecciona un archivo por número: "))
+        selected_file = files[file_choice - 1]
+
+        # Leer el contenido del archivo
+        with open(selected_file, "r") as f:
+            code_lines = [{"line": line.strip(), "time_cost": 1, "exec_count": 1} for line in f.readlines()]
+
+    elif choice == "2":
+        # Ingresar pseudocódigo manualmente
+        print("\nIngresa tu pseudocódigo línea por línea. Escribe 'END' para finalizar:")
+        code_lines = []
+        while True:
+            line = input(">> ")
+            if line.strip().upper() == "END":
+                break
+            code_lines.append({"line": line.strip(), "time_cost": 1, "exec_count": 1})
+
+    else:
+        print("Opción inválida.")
+        return
+
+    # Realizar el análisis
+    result = analyze_recurrence(code_lines)
+
+    # Mostrar el resultado
+    print("\n ECUACIÓN DE RECURRENCIA:")
+    print(f"   → Detectada: {result['recurrence_eq']}")
+    print(f"   → Solución: {result['solution']}\n")
+
+    print(" DESGLOSE LÍNEA POR LÍNEA:")
+    for step in result["series_steps"]:
+        print(f"   • {step}")
+
+    print("\n" + "=" * 70)
+    print(" ANÁLISIS COMPLETADO")
+    print("=" * 70)

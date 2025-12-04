@@ -11,7 +11,7 @@ sys.path.insert(0, str(project_root))
 
 from core.complexity import ComplexityAnalyzer
 from core.parser import PseudocodeParser
-from core.patterns import PatternRecognizer
+# from core.patterns import PatternRecognizer
 from llm.integration import ask_gemini
 import re
 
@@ -42,29 +42,6 @@ def diagnose_algorithm(code: str, algorithm_name: str = "test"):
     print(f"   Omega:  {complexity.omega}")
     print(f"   Theta:  {complexity.theta}")
     
-    parser = PseudocodeParser()
-    lines = parser.analyze_by_line(code)
-    
-    # Extraer recurrencia
-    recurrence = None
-    for item in lines:
-        if item.get('type') == 'summary' and 'recurrence' in item:
-            recurrence = item.get('recurrence')
-            break
-    
-    if recurrence:
-        print(f"\n Recurrencia:")
-        print(f"   {recurrence}")
-    
-    # Patrones
-    recognizer = PatternRecognizer()
-    patterns = recognizer.analyze(code)
-    
-    if patterns:
-        print(f"\n Patrones detectados:")
-        for p in patterns:
-            print(f"   • {p.get('name')}: {p.get('confidence')}")
-    
     # ========== ANÁLISIS DE GEMINI ==========
     print("\n" + "="*80)
     print("  ANÁLISIS DE GEMINI (Referencia)")
@@ -75,7 +52,6 @@ def diagnose_algorithm(code: str, algorithm_name: str = "test"):
 1. Peor caso (Big-O): [usa formato O(...)]
 2. Mejor caso (Omega): [usa formato Ω(...) o Omega(...)]
 3. Caso promedio (Theta): [usa formato Θ(...) o Theta(...)]
-4. Recurrencia (si aplica): [usa formato T(n) = ...]
 
 CÓDIGO:
 ```
@@ -392,37 +368,57 @@ def generate_recommendations(issues: list, complexity, gemini_complexities: dict
 
 
 def test_multiple_algorithms():
-    """Prueba diagnóstica con múltiples algoritmos."""
-    
+    """
+    Muestra una lista de archivos en la carpeta tests/pseudocode y permite analizar uno de ellos.
+    """
     print("""
 ╔══════════════════════════════════════════════════════════════════════╗
 ║          DIAGNÓSTICO MÚLTIPLE - ANÁLISIS DE PUNTUACIONES BAJAS      ║
 ╚══════════════════════════════════════════════════════════════════════╝
     """)
-    
-    # Cargar ejemplos desde directorio
+
+    # Cargar ejemplos desde el directorio
     examples_dir = Path(__file__).parent.parent / 'pseudocode'
-    
+
     if not examples_dir.exists():
         print(f" Directorio no encontrado: {examples_dir}")
         return
-    
-    txt_files = list(examples_dir.glob('*.txt'))[:3]  # Solo primeros 3 para diagnóstico
-    
+
+    txt_files = list(examples_dir.glob('*.txt'))
+
     if not txt_files:
         print(f" No se encontraron archivos .txt en {examples_dir}")
         return
-    
-    for txt_file in txt_files:
-        try:
-            code = txt_file.read_text(encoding='utf-8')
-            diagnose_algorithm(code, txt_file.stem)
-            
-            input("\n  Presiona Enter para continuar al siguiente algoritmo...")
-        except Exception as e:
-            print(f"❌ Error procesando {txt_file.name}: {e}")
-            import traceback
-            traceback.print_exc()
+
+    while True:
+        print("\nArchivos disponibles en 'tests/pseudocode':")
+        for idx, file in enumerate(txt_files, start=1):
+            print(f"{idx}. {file.name}")
+
+        print(f"{len(txt_files) + 1}. Volver al menú principal")
+        choice = input("Seleccione un archivo por número o vuelva al menú principal: ").strip()
+
+        if choice.isdigit():
+            choice = int(choice)
+            if 1 <= choice <= len(txt_files):
+                selected_file = txt_files[choice - 1]
+                print(f"\nAnalizando archivo: {selected_file.name}")
+                print("-" * 50)
+                try:
+                    code = selected_file.read_text(encoding='utf-8')
+                    diagnose_algorithm(code, selected_file.stem)
+                except Exception as e:
+                    print(f"❌ Error procesando {selected_file.name}: {e}")
+                    import traceback
+                    traceback.print_exc()
+                print("-" * 50)
+            elif choice == len(txt_files) + 1:
+                # Volver al menú principal
+                break
+            else:
+                print("Número inválido. Intente nuevamente.")
+        else:
+            print("Entrada inválida. Por favor, ingrese un número.")
 
 
 if __name__ == "__main__":

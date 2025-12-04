@@ -16,12 +16,12 @@ sys.path.insert(0, str(project_root))
 
 from llm.validation import (
     validate_efficiency, 
-    validate_directory,
     EfficiencyOrchestrator,
-    EfficiencyValidationResult
+    EfficiencyValidationResult,
+    analyze_line_by_line
 )
 from core.complexity import ComplexityAnalyzer
-from core.patterns import PatternRecognizer
+# from core.patterns import PatternRecognizer
 from core.parser import PseudocodeParser
 
 # Loader local para ejemplos 
@@ -172,26 +172,26 @@ def debug_analysis(code: str, name: str = "debug") -> EfficiencyValidationResult
         traceback.print_exc()
         return None
     
-    # ========== PASO 2: ANÁLISIS DE PATRONES ==========
-    print("\n PASO 2: Análisis de Patrones Algorítmicos")
-    print("-"*70)
-    pattern_recognizer = PatternRecognizer()
+    # # ========== PASO 2: ANÁLISIS DE PATRONES ==========
+    # print("\n PASO 2: Análisis de Patrones Algorítmicos")
+    # print("-"*70)
+    # pattern_recognizer = PatternRecognizer()
     
-    try:
-        patterns = pattern_recognizer.analyze(code)
-        print(f"✓ Patrones detectados: {len(patterns)}")
+    # try:
+    #     patterns = pattern_recognizer.analyze(code)
+    #     print(f"✓ Patrones detectados: {len(patterns)}")
         
-        if patterns:
-            for p in patterns:
-                confidence = p.get('confidence', 'N/A')
-                print(f"  • {p.get('name', 'unknown'):25s} | {p.get('description', '')[:40]:40s} | {p.get('complexity', 'N/A'):15s} | Confianza: {confidence}")
-        else:
-            print("  ℹ  No se detectaron patrones específicos")
+    #     if patterns:
+    #         for p in patterns:
+    #             confidence = p.get('confidence', 'N/A')
+    #             print(f"  • {p.get('name', 'unknown'):25s} | {p.get('description', '')[:40]:40s} | {p.get('complexity', 'N/A'):15s} | Confianza: {confidence}")
+    #     else:
+    #         print("  ℹ  No se detectaron patrones específicos")
             
-    except Exception as e:
-        print(f" Error en análisis de patrones: {e}")
-        import traceback
-        traceback.print_exc()
+    # except Exception as e:
+    #     print(f" Error en análisis de patrones: {e}")
+    #     import traceback
+    #     traceback.print_exc()
     
     # ========== PASO 3: ANÁLISIS LÍNEA POR LÍNEA ==========
     print("\n PASO 3: Análisis de Costos por Línea")
@@ -292,8 +292,8 @@ def test_simple_cases():
         
         if result1:
             print(f"\n✅ RESULTADO:")
-            print(f"   Puntuación de Eficiencia: {result1.overall_efficiency_score:.1f}/100")
-            print(f"   Rigor Matemático: {result1.mathematical_rigor}")
+            # print(f"   Puntuación de Eficiencia: {result1.overall_efficiency_score:.1f}/100")
+            # print(f"   Rigor Matemático: {result1.mathematical_rigor}")
             
             print(f"\n   Desglose:")
             print(f"   - Complejidad: {result1.complexity_correctness:.1f}/100")
@@ -324,14 +324,14 @@ def test_simple_cases():
         code2 = load_example('nested_for.txt')
         result2 = debug_analysis(code2, "loops_anidados_O_n2")
         
-        if result2:
-            print(f"\n RESULTADO:")
-            print(f"   Puntuación de Eficiencia: {result2.overall_efficiency_score:.1f}/100")
-            print(f"   Rigor Matemático: {result2.mathematical_rigor}")
+        # if result2:
+        #     print(f"\n RESULTADO:")
+        #     print(f"   Puntuación de Eficiencia: {result2.overall_efficiency_score:.1f}/100")
+        #     print(f"   Rigor Matemático: {result2.mathematical_rigor}")
             
-            results.append(("Loops Anidados O(n²)", result2))
-        else:
-            results.append(("Loops Anidados O(n²)", None))
+        #     results.append(("Loops Anidados O(n²)", result2))
+        # else:
+        #     results.append(("Loops Anidados O(n²)", None))
             
     except FileNotFoundError as e:
         print(f"\n  {e}")
@@ -348,14 +348,14 @@ def test_simple_cases():
         code3 = load_example('binary_search.txt')
         result3 = debug_analysis(code3, "busqueda_binaria_O_log_n")
         
-        if result3:
-            print(f"\n RESULTADO:")
-            print(f"   Puntuación de Eficiencia: {result3.overall_efficiency_score:.1f}/100")
-            print(f"   Rigor Matemático: {result3.mathematical_rigor}")
+        # if result3:
+        #     print(f"\n RESULTADO:")
+        #     print(f"   Puntuación de Eficiencia: {result3.overall_efficiency_score:.1f}/100")
+        #     print(f"   Rigor Matemático: {result3.mathematical_rigor}")
             
-            results.append(("Búsqueda Binaria O(log n)", result3))
-        else:
-            results.append(("Búsqueda Binaria O(log n)", None))
+        #     results.append(("Búsqueda Binaria O(log n)", result3))
+        # else:
+        #     results.append(("Búsqueda Binaria O(log n)", None))
             
     except FileNotFoundError as e:
         print(f"\n  {e}")
@@ -370,14 +370,14 @@ def test_simple_cases():
         code4 = load_example('constant.txt')
         result4 = debug_analysis(code4, "constante_O_1")
         
-        if result4:
-            print(f"\n RESULTADO:")
-            print(f"   Puntuación de Eficiencia: {result4.overall_efficiency_score:.1f}/100")
-            print(f"   Rigor Matemático: {result4.mathematical_rigor}")
+        # if result4:
+        #     print(f"\n RESULTADO:")
+        #     print(f"   Puntuación de Eficiencia: {result4.overall_efficiency_score:.1f}/100")
+        #     print(f"   Rigor Matemático: {result4.mathematical_rigor}")
             
-            results.append(("Constante O(1)", result4))
-        else:
-            results.append(("Constante O(1)", None))
+        #     results.append(("Constante O(1)", result4))
+        # else:
+        #     results.append(("Constante O(1)", None))
             
     except FileNotFoundError as e:
         print(f"\n  {e}")
@@ -470,8 +470,8 @@ FIN PARA
     print("\n Validando con sistema de eficiencia completo...")
     result = validate_efficiency(code, "quick_test", is_file=False)
     
-    print(f"\n   Puntuación de Eficiencia: {result.overall_efficiency_score:.1f}/100")
-    print(f"   Rigor Matemático: {result.mathematical_rigor}")
+    # print(f"\n   Puntuación de Eficiencia: {result.overall_efficiency_score:.1f}/100")
+    # print(f"   Rigor Matemático: {result.mathematical_rigor}")
     
     if result.overall_efficiency_score >= 70:
         print("\n TODO FUNCIONA CORRECTAMENTE!")
@@ -748,11 +748,9 @@ def _generate_quick_summary(
 
 def show_menu():
     """Muestra el menú principal de opciones"""
-    
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print(" SISTEMA DE PRUEBAS - VALIDACIÓN DE EFICIENCIA ALGORÍTMICA")
-    print("="*70)
-    
+    print("=" * 70)
     print("\nOpciones disponibles:")
     print()
     print("  1. Prueba rápida (verificar corrección básica)")
@@ -760,53 +758,55 @@ def show_menu():
     print("  3. Debug interactivo (tu propio código)")
     print("  4. Validar directorio completo")
     print("  5. Listar archivos disponibles")
+    print("  6. Análisis línea por línea y ecuación de recurrencia")  # Nueva opción
     print("  0. Salir")
     print()
 
 def main():
     """Función principal con menú interactivo"""
-    
     while True:
         show_menu()
-        
         try:
-            choice = input("Selecciona una opción (0-5): ").strip()
+            choice = input("Selecciona una opción (0-6): ").strip()
         except (EOFError, KeyboardInterrupt):
             print("\n\n ¡Hasta luego!")
             sys.exit(0)
-        
+
         print()
-        
+
         if choice == "1":
             success = quick_fix_test()
             if not success:
                 print("\n  Se detectaron problemas en el análisis")
-                
+
         elif choice == "2":
             test_simple_cases()
-            
+
         elif choice == "3":
             interactive_debug()
-            
+
         elif choice == "4":
             test_directory()
-            
+
         elif choice == "5":
             examples = list_available_examples()
             print(" Archivos disponibles:")
-            print("-"*70)
+            print("-" * 70)
             for ex in examples:
                 print(f"   • {ex.name:40s} ({ex.stat().st_size} bytes)")
-            print("-"*70)
+            print("-" * 70)
             print(f"Total: {len(examples)} archivos")
-            
+
+        elif choice == "6":  # Nueva opción
+            analyze_line_by_line()
+
         elif choice == "0":
             print(" ¡Hasta luego!")
             sys.exit(0)
-            
+
         else:
             print(" Opción inválida. Intenta de nuevo.")
-        
+
         input("\n  Presiona Enter para continuar...")
 
 if __name__ == "__main__":
