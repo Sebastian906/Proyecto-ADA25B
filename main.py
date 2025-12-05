@@ -14,6 +14,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from core.parser import PseudocodeParser
 from core.complexity import ComplexityResult, ComplexityAnalyzer
+from core.python_converter import convert_python_to_pseudocode
+from core.patterns import PatternRecognizer
 from visualization.diagrams import analyze_and_visualize, extract_algorithm_name
 from llm.integration import ask_gemini
 from llm.validation import validate_efficiency
@@ -63,11 +65,25 @@ async def analyze_code(request: CodeAnalysisRequest):
     try:
         algo_name = request.algorithm_name or extract_algorithm_name(request.code)
         output_dir = f"visualization/output/{algo_name}"
+        original_code = request.code
+        analysis_code = original_code
+
+        if request.code_type == "python":
+            print("\n→ Conversión: Python → Pseudocódigo para análisis")
+            try:
+                analysis_code = convert_python_to_pseudocode(original_code)
+                print(f"✓ Conversión exitosa")
+                print("Pseudocódigo generado:")
+                print(analysis_code)
+            except Exception as e:
+                print(f"⚠ Error en conversión: {e}")
+                print("  → Usando código original para análisis")
+                analysis_code = original_code
 
         # Análisis principal
-        print("→ Paso 1: Análisis de visualización...")
+        print("\n→ Paso 1: Análisis de visualización...")
         result = analyze_and_visualize(
-            code=request.code,
+            code=original_code,  # Usar código original para diagramas
             code_type=request.code_type,
             output_dir=output_dir
         )
@@ -76,9 +92,8 @@ async def analyze_code(request: CodeAnalysisRequest):
         # Análisis línea por línea
         print("\n→ Paso 2: Análisis línea por línea...")
         parser = PseudocodeParser()
-        line_analysis = parser.analyze_by_line(request.code)
+        line_analysis = parser.analyze_by_line(analysis_code)  
 
-        # Filtrar líneas relevantes (sin summary)
         lines_detail = [
             line for line in line_analysis 
             if line.get('type') != 'summary'
@@ -102,13 +117,19 @@ async def analyze_code(request: CodeAnalysisRequest):
         # Análisis de Complejidad
         print("\n→ Paso 3: Análisis de complejidad...")
         analyzer = ComplexityAnalyzer()
-        complexity_result = analyzer.analyze(request.code)
+        complexity_result = analyzer.analyze(analysis_code)
         print(f"✓ Big-O: {complexity_result.big_o}")
 
+        print("\n→ Paso 4: Análisis de patrones...")
+        recognizer = PatternRecognizer()
+        patterns = recognizer.analyze(analysis_code)  
+        print(f"✓ Patrones detectados: {len(patterns)}")
+
         # Validación con LLM (Gemini)
+        print("\n→ Paso 5: Validación con Gemini...")
         try:
             validation_result = validate_efficiency(
-                request.code,
+                original_code,  # Usar código original para validación
                 algo_name,
                 is_file=False
             )
@@ -119,7 +140,7 @@ async def analyze_code(request: CodeAnalysisRequest):
                 'recurrence_correctness': validation_result.recurrence_correctness,
                 'mathematical_rigor': validation_result.mathematical_rigor,
                 'auto_analysis': validation_result.auto_analysis,
-                'gemini_analysis': validation_result.gemini_analysis[:200] + '...',  # Truncar para log
+                'gemini_analysis': validation_result.gemini_analysis[:200] + '...',
                 'complexity_details': validation_result.complexity_details,
                 'recurrence_details': validation_result.recurrence_details,
                 'critical_errors': validation_result.critical_errors,
@@ -145,13 +166,30 @@ async def analyze_code(request: CodeAnalysisRequest):
             "output_directory": output_dir,
             "line_analysis": lines_detail,
             "recurrence": recurrence_info,
+            "complexity": {
+                "big_o": complexity_result.big_o,
+                "omega": complexity_result.omega,
+                "theta": complexity_result.theta,
+                "explanation": complexity_result.explanation,
+                "recurrence": complexity_result.recurrence,
+                "pattern_type": complexity_result.pattern_type
+            },
+            "patterns": [
+                {
+                    "name": p.get("name", "unknown"),
+                    "description": p.get("description", ""),
+                    "confidence": f"{p.get('confidence', 0):.1f}%"
+                }
+                for p in patterns
+            ],
             "validation": validation_summary
         }
 
         # LOG FINAL
         print(f"✓ RESPUESTA CONSTRUIDA:")
-        print(f"  - Complejidad: ✓")
-        print(f"  - Patrones: {len(result.get('patterns', []))}")
+        print(f"  - Tipo código: {request.code_type}")
+        print(f"  - Complejidad: ✓ (Big-O: {complexity_result.big_o})")
+        print(f"  - Patrones: {len(patterns)}")
         print(f"  - Líneas analizadas: {len(lines_detail)}")
         print(f"  - Recurrencia: {'✓' if recurrence_info else '✗'}")
         print(f"  - Validación: {'✓' if validation_summary else '✗'}")
