@@ -607,13 +607,31 @@ def analyze_and_visualize(code: str, code_type: str = "python", output_dir: str 
         "total_nodes": 0,
         "recursive_functions": [],
         "files": [],
-        "complexity": None
+        "complexity": None,
+        "patterns": []
     }
     
     # Procesar según tipo
     if code_type == "pseudocode":
         analysis = builder.build_from_pseudocode(code)
         results["complexity"] = analysis.get("complexity")
+        try:
+            recognizer = PatternRecognizer()
+            patterns_detected = recognizer.analyze(code)
+            
+            # Formatear patrones para el frontend
+            results["patterns"] = [
+                {
+                    "name": p.get("name", "unknown"),
+                    "description": p.get("description", ""),
+                    "confidence": f"{p.get('confidence', 0):.1f}%"
+                }
+                for p in patterns_detected
+            ]
+            print(f"✓ Patrones detectados: {len(patterns_detected)}")
+        except Exception as e:
+            print(f"⚠ Error en análisis de patrones: {e}")
+            results["patterns"] = []
     else:
         root_id = builder.build_from_python_code(code)
         if not root_id:
@@ -667,6 +685,14 @@ def analyze_and_visualize(code: str, code_type: str = "python", output_dir: str 
     json_path = f"{output_dir}/ast_data.json"
     json_exp.export(json_path)
     results["files"].append(json_path)
+
+    try:
+        mm = MermaidExporter(builder)
+        mermaid_code = mm.generate()
+        results["mermaid_code"] = mermaid_code 
+        print("✓ Código Mermaid generado")
+    except Exception as e:
+        print(f"⚠ Error generando Mermaid: {e}")
     
     print(f"\nAnalisis completado en '{output_dir}'\n")
     

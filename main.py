@@ -6,14 +6,17 @@ detectar patrones algorítmicos, y generar diagramas visuales. También incluye 
 funcionalidades específicas desde la terminal.
 """
 
+from pathlib import Path
 import subprocess
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from core.parser import PseudocodeParser
-from core.complexity import ComplexityResult
+from core.complexity import ComplexityResult, ComplexityAnalyzer
 from visualization.diagrams import analyze_and_visualize, extract_algorithm_name
 from llm.integration import ask_gemini
+from llm.validation import validate_efficiency
 import uvicorn
 import re
 import socket
@@ -35,6 +38,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Crear directorio si no existe
+visualization_dir = Path("visualization/output")
+visualization_dir.mkdir(parents=True, exist_ok=True)
+
+# Montar directorio como estático
+app.mount(
+    "/visualization/output",
+    StaticFiles(directory="visualization/output"),
+    name="visualization"
+)
+
 class CodeAnalysisRequest(BaseModel):
     code: str
     code_type: str = "python"
@@ -49,17 +63,106 @@ async def analyze_code(request: CodeAnalysisRequest):
     try:
         algo_name = request.algorithm_name or extract_algorithm_name(request.code)
         output_dir = f"visualization/output/{algo_name}"
+
+        # Análisis principal
+        print("→ Paso 1: Análisis de visualización...")
         result = analyze_and_visualize(
             code=request.code,
             code_type=request.code_type,
             output_dir=output_dir
         )
-        return {
+        print(f"✓ Nodos generados: {result.get('total_nodes', 0)}")
+
+        # Análisis línea por línea
+        print("\n→ Paso 2: Análisis línea por línea...")
+        parser = PseudocodeParser()
+        line_analysis = parser.analyze_by_line(request.code)
+
+        # Filtrar líneas relevantes (sin summary)
+        lines_detail = [
+            line for line in line_analysis 
+            if line.get('type') != 'summary'
+        ]
+        print(f"✓ Líneas analizadas: {len(lines_detail)}")
+
+        # Extraer recurrencia
+        recurrence_info = None
+        for line in line_analysis:
+            if line.get('type') == 'summary' and 'recurrence' in line:
+                recurrence_info = {
+                    'equation': line.get('recurrence'),
+                    'simplified': line.get('recurrence')
+                }
+                print(f"✓ Recurrencia detectada: {recurrence_info['equation']}")
+                break
+
+        if not recurrence_info:
+            print("⚠ No se detectó recurrencia")
+
+        # Análisis de Complejidad
+        print("\n→ Paso 3: Análisis de complejidad...")
+        analyzer = ComplexityAnalyzer()
+        complexity_result = analyzer.analyze(request.code)
+        print(f"✓ Big-O: {complexity_result.big_o}")
+
+        # Validación con LLM (Gemini)
+        try:
+            validation_result = validate_efficiency(
+                request.code,
+                algo_name,
+                is_file=False
+            )
+            
+            validation_summary = {
+                'overall_score': validation_result.overall_efficiency_score,
+                'complexity_correctness': validation_result.complexity_correctness,
+                'recurrence_correctness': validation_result.recurrence_correctness,
+                'mathematical_rigor': validation_result.mathematical_rigor,
+                'auto_analysis': validation_result.auto_analysis,
+                'gemini_analysis': validation_result.gemini_analysis[:200] + '...',  # Truncar para log
+                'complexity_details': validation_result.complexity_details,
+                'recurrence_details': validation_result.recurrence_details,
+                'critical_errors': validation_result.critical_errors,
+                'warnings': validation_result.warnings,
+                'corrections': validation_result.corrections
+            }
+            print(f"✓ Validación completada - Score: {validation_summary['overall_score']:.1f}/100")
+            
+        except Exception as e:
+            print(f"⚠ Error en validación con Gemini: {e}")
+            validation_summary = None
+
+        # Convertir rutas locales a URLs accesibles desde el frontend
+        if "files" in result and result["files"]:
+            result["files"] = [
+                f"http://localhost:8000/{file}" if not file.startswith("http") else file
+                for file in result["files"]
+            ]
+
+        response_data = {
             **result,
             "algorithm_name": algo_name,
-            "output_directory": output_dir
+            "output_directory": output_dir,
+            "line_analysis": lines_detail,
+            "recurrence": recurrence_info,
+            "validation": validation_summary
         }
+
+        # LOG FINAL
+        print(f"✓ RESPUESTA CONSTRUIDA:")
+        print(f"  - Complejidad: ✓")
+        print(f"  - Patrones: {len(result.get('patterns', []))}")
+        print(f"  - Líneas analizadas: {len(lines_detail)}")
+        print(f"  - Recurrencia: {'✓' if recurrence_info else '✗'}")
+        print(f"  - Validación: {'✓' if validation_summary else '✗'}")
+        print(f"  - Archivos: {len(result.get('files', []))}")
+        
+        return response_data
+        
     except Exception as e:
+        import traceback
+        print(f"\nERROR EN ANÁLISIS:")
+        traceback.print_exc()
         raise HTTPException(status_code=400, detail=str(e))
 
 def execute_command(command):
