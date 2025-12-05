@@ -383,15 +383,27 @@ class MermaidExporter:
         """Genera código Mermaid"""
         nodes = self.builder.get_nodes()
         
+        if not nodes:
+            return "graph TD\n    A[No nodes to display]\n"
+        
         self.mermaid_code = "graph TD\n"
         
         for node_id, node in nodes.items():
             label = node.label[:40]
+            
+            # Limpiar caracteres problemáticos SÓLO los realmente problemáticos
+            label = label.replace('"', "'")  # Comillas dobles -> simples
+            label = label.replace('\n', ' ')  # Saltos de línea -> espacio
+            label = label.replace('\r', '')   # Retorno de carro
+            label = label.strip()              # Espacios extras
+            
             if node.complexity and node.complexity != 'Analysis':
-                label += f"<br/>{node.complexity}"
+                complexity_clean = node.complexity.replace('"', "'").strip()
+                label += f" - {complexity_clean}"
             
             node_class = self._get_class(node.node_type)
-            self.mermaid_code += f'    {node_id}["{label}"] {node_class}\n'
+            class_str = f" {node_class}" if node_class else ""
+            self.mermaid_code += f'    {node_id}["{label}"]{class_str}\n'
         
         self.mermaid_code += "\n"
         
@@ -420,11 +432,11 @@ class MermaidExporter:
     def _get_styles(self) -> str:
         """Define estilos Mermaid"""
         return """
-    classDef loop fill:#FFB6C1,stroke:#333,stroke-width:2px,color:#000
-    classDef condition fill:#87CEEB,stroke:#333,stroke-width:2px,color:#000
-    classDef call fill:#98FB98,stroke:#333,stroke-width:2px,color:#000
-    classDef function fill:#FFD700,stroke:#333,stroke-width:2px,color:#000
-    classDef return fill:#FFA500,stroke:#333,stroke-width:2px,color:#000
+    classDef loop fill:#FFB6C1,stroke:#333,stroke-width:2,color:#000
+    classDef condition fill:#87CEEB,stroke:#333,stroke-width:2,color:#000
+    classDef call fill:#98FB98,stroke:#333,stroke-width:2,color:#000
+    classDef function fill:#FFD700,stroke:#333,stroke-width:2,color:#000
+    classDef return fill:#FFA500,stroke:#333,stroke-width:2,color:#000
 """
     
     def save_markdown(self, filepath: str) -> None:
