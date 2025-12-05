@@ -8,6 +8,7 @@ funcionalidades específicas desde la terminal.
 
 import subprocess
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from core.parser import PseudocodeParser
 from core.complexity import ComplexityResult
@@ -15,8 +16,24 @@ from visualization.diagrams import analyze_and_visualize, extract_algorithm_name
 from llm.integration import ask_gemini
 import uvicorn
 import re
+import socket
+import sys
 
 app = FastAPI(title="Analizador de Complejidades", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5500",  # Live Server (VS Code)
+        "http://127.0.0.1:5500",
+        "http://localhost:8080",  # http-server
+        "http://127.0.0.1:8080",
+        "file://",  # Para abrir HTML directamente
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class CodeAnalysisRequest(BaseModel):
     code: str
@@ -77,7 +94,24 @@ def menu():
         
         if choice == "1":
             print("Iniciando servidor FastAPI...")
-            uvicorn.run(app, host="127.0.0.1", port=8000)
+            # Configure uvicorn with proper socket options for Windows
+            config = uvicorn.Config(
+                app,
+                host="127.0.0.1",
+                port=8000,
+                log_level="info"
+            )
+            # Enable SO_REUSEADDR to allow immediate rebinding on Windows
+            server = uvicorn.Server(config)
+            try:
+                import asyncio
+                asyncio.run(server.serve())
+            except KeyboardInterrupt:
+                print("\nServidor detenido.")
+            except OSError as e:
+                print(f"Error al iniciar servidor: {e}")
+                print("Intenta de nuevo en unos segundos o usa otro puerto.")
+                sys.exit(1)
         elif choice == "2":
             print("Ejecutando verificación de funcionalidad de LLM (Gemini)...")
             execute_command("python -m tests.test_algorithms.test_llm")
