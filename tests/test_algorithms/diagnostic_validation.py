@@ -168,85 +168,26 @@ Responde de forma concisa y estructurada."""
 
 
 def extract_complexities_from_gemini(text: str) -> dict:
-    """Extrae complejidades del texto de Gemini con múltiples estrategias."""
-    complexities = {
-        'big_o': None,
-        'omega': None,
-        'theta': None
-    }
-    
-    text_lower = text.lower()
-    
-    # Buscar las complejidades en el texto
-    big_o_match = re.search(r'peor caso \(big-o\):\s*o\(([^)]+)\)', text, re.IGNORECASE)
-    omega_match = re.search(r'mejor caso \(omega\):\s*ω\(([^)]+)\)', text, re.IGNORECASE)
-    theta_match = re.search(r'caso promedio \(theta\):\s*θ\(([^)]+)\)', text, re.IGNORECASE)
-    
-    # Asignar los valores encontrados a las claves esperadas
-    if big_o_match:
-        complexities['big_o'] = f"O({big_o_match.group(1).strip()})"
-    if omega_match:
-        complexities['omega'] = f"Ω({omega_match.group(1).strip()})"
-    if theta_match:
-        complexities['theta'] = f"Θ({theta_match.group(1).strip()})"
-    
-    # Depuración: Imprimir las complejidades extraídas
-    print("Complejidades extraídas de Gemini:", complexities)
-    
-    # Estrategia 1: Buscar patrones explícitos
-    patterns = {
-        'big_o': [
-            r'peor\s+caso[:\s]+[o|O]\s*\(([^)]+)\)',
-            r'big-o[:\s]+[o|O]\s*\(([^)]+)\)',
-            r'o\(([^)]+)\)\s*(?:peor|worst)',
-        ],
-        'omega': [
-            r'mejor\s+caso[:\s]+[ω|Ω|omega|OMEGA]\s*\(([^)]+)\)',
-            r'omega[:\s]+[ω|Ω]\s*\(([^)]+)\)',
-            r'[ω|Ω]\(([^)]+)\)\s*(?:mejor|best)',
-        ],
-        'theta': [
-            r'caso\s+promedio[:\s]+[θ|Θ|theta|THETA]\s*\(([^)]+)\)',
-            r'theta[:\s]+[θ|Θ]\s*\(([^)]+)\)',
-            r'[θ|Θ]\(([^)]+)\)\s*(?:promedio|average)',
-        ]
-    }
-    
-    for complexity_type, pattern_list in patterns.items():
-        for pattern in pattern_list:
-            match = re.search(pattern, text_lower)
-            if match:
-                complexities[complexity_type] = f"O({match.group(1).strip()})"
-                break
-    
-    # Estrategia 2: Buscar cualquier notación O(...), Ω(...), Θ(...)
-    if not complexities['big_o']:
-        big_o_match = re.search(r'o\s*\(([^)]+)\)', text_lower)
-        if big_o_match:
-            complexities['big_o'] = f"O({big_o_match.group(1).strip()})"
-    
-    if not complexities['omega']:
-        omega_match = re.search(r'[ω|omega]\s*\(([^)]+)\)', text_lower)
-        if omega_match:
-            complexities['omega'] = f"Ω({omega_match.group(1).strip()})"
-    
-    if not complexities['theta']:
-        theta_match = re.search(r'[θ|theta]\s*\(([^)]+)\)', text_lower)
-        if theta_match:
-            complexities['theta'] = f"Θ({theta_match.group(1).strip()})"
-    
-    return complexities
+    """
+    Extrae complejidades del texto de Gemini usando funciones centralizadas.
+    Delegado a llm.integration.extract_gemini_complexities() para consistencia.
+    """
+    from llm.integration import extract_gemini_complexities
+    return extract_gemini_complexities(text)
 
 
 def normalize_complexity(complexity: str) -> str:
-    """Normaliza una notación de complejidad para comparación."""
+    """
+    Normaliza una notación de complejidad para comparación.
+    Mantiene la estructura: O(función) para comparación correcta.
+    """
     if not complexity or complexity == 'No detectado':
         return ""
     
     # Remover espacios y convertir a minúsculas
     norm = complexity.lower().replace(' ', '')
     
-    # Extraer solo la función, sin la notación
+    # Extraer solo la función, sin la notación O/Ω/Θ
     norm = norm.replace('o(', '').replace('ω(', '').replace('θ(', '')
     norm = norm.replace('omega(', '').replace('theta(', '').replace(')', '')
     
@@ -269,8 +210,12 @@ def are_equivalent(complexity1: str, complexity2: str) -> bool:
     if not complexity1 or not complexity2:
         return False
     
+    # Normalizar ambas
+    norm1 = normalize_complexity(complexity1)
+    norm2 = normalize_complexity(complexity2)
+    
     # Comparación directa
-    if complexity1 == complexity2:
+    if norm1 == norm2:
         return True
     
     # Equivalencias conocidas
@@ -280,10 +225,11 @@ def are_equivalent(complexity1: str, complexity2: str) -> bool:
         'logn': ['log(n)', 'lgn'],
         'nlogn': ['nlog(n)', 'n*logn'],
         '1': ['constant', 'k'],
+        '2^n': ['2n', 'exp'],  # 2^n puede confundirse
     }
     
     for standard, variants in equivalences.items():
-        if complexity1 in [standard] + variants and complexity2 in [standard] + variants:
+        if norm1 in [standard] + variants and norm2 in [standard] + variants:
             return True
     
     return False
